@@ -1,754 +1,158 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simulador de Sociedades — O Jogo e o Laboratório</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="paises.js"></script>
-<style>
-  :root {
-    --bg: #080c11; --panel: #101720; --border: #263442; --text: #e8edf3; --muted: #8d9baa;
-    --azul: #3b82f6; --azul-l: #60a5fa; --verde: #10b981; --vermelho: #ef4444; --amarelo: #f59e0b;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; display: flex; flex-direction: column; }
-  
-  /* Ecrãs */
-  .ecra { display: none; min-height: 100vh; padding: 30px 15px; animation: fade 0.3s ease; }
-  .ecra.ativo { display: flex; flex-direction: column; align-items: center; }
-  @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  
-  .container { width: 100%; max-width: 900px; margin: 0 auto; }
-  .container-largo { max-width: 1400px; }
-  .container-centro { max-width: 600px; margin: 0 auto; text-align: center; }
-
-  h1, h2, h3 { font-weight: 700; line-height: 1.2; }
-  h1 { font-size: clamp(28px, 5vw, 48px); background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 15px; }
-  h2 { font-size: clamp(22px, 4vw, 32px); margin-bottom: 20px; color: #fff; }
-  .sub { color: var(--muted); font-size: 1rem; margin-bottom: 25px; }
-
-  /* Componentes */
-  .cartao { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; text-align: left; }
-  .btn { padding: 14px 24px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: 0.2s; display: inline-flex; justify-content: center; align-items: center; }
-  .btn-p { background: linear-gradient(135deg, var(--azul), var(--azul-l)); color: #fff; box-shadow: 0 4px 15px rgba(59,130,246,0.3); }
-  .btn-p:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.5); }
-  .btn-s { background: #1e293b; color: #fff; border: 1px solid var(--border); }
-  .btn-s:hover { background: #2a3a4d; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  
-  .acoes { display: flex; gap: 10px; justify-content: space-between; margin-top: 25px; width: 100%; }
-
-  /* Grelhas e Opções */
-  .grelha { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; max-height: 60vh; overflow-y: auto; padding: 5px; }
-  .grelha-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .opcao { background: rgba(255,255,255,0.03); border: 2px solid var(--border); border-radius: 10px; padding: 15px; cursor: pointer; transition: 0.2s; position: relative; }
-  .opcao:hover { background: rgba(255,255,255,0.06); }
-  .opcao.sel { border-color: var(--azul); background: rgba(59,130,246,0.1); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-  .opcao .check { position: absolute; top: 10px; right: 10px; color: var(--azul-l); font-weight: bold; display: none; }
-  .opcao.sel .check { display: block; }
-  .opcao h3 { font-size: 1.1rem; margin-bottom: 5px; }
-  .opcao p { font-size: 0.85rem; color: var(--muted); }
-  .opcao .ico { font-size: 1.5rem; margin-bottom: 8px; }
-
-  /* Sliders */
-  .slider-grupo { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px; }
-  .slider-grupo label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
-  .slider-grupo label span { font-weight: bold; color: var(--azul-l); }
-  input[type="range"] { width: 100%; accent-color: var(--azul); cursor: pointer; }
-
-  /* Resultados Simples */
-  .veredicto { padding: 20px; border-radius: 10px; text-align: center; font-size: 1.1rem; font-weight: 600; margin: 20px 0; }
-  .v-bom { background: rgba(16,185,129,0.15); border: 2px solid var(--verde); color: var(--verde); }
-  .v-mau { background: rgba(239,68,68,0.15); border: 2px solid var(--vermelho); color: var(--vermelho); }
-  .v-neutro { background: rgba(245,158,11,0.15); border: 2px solid var(--amarelo); color: var(--amarelo); }
-  
-  .comp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
-  .comp-item { background: var(--panel); border: 1px solid var(--border); padding: 15px; border-radius: 10px; text-align: center; }
-  .comp-item .lbl { font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
-  .comp-item .val { font-size: 1.3rem; font-weight: 700; }
-
-  /* Modo Avançado (Dashboard) */
-  .dash-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
-  .metricas-top { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-  .metrica { background: var(--panel); border: 1px solid var(--border); padding: 12px; border-radius: 8px; }
-  .metrica .n { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
-  .metrica .v { font-size: 1.2rem; font-weight: 700; margin-top: 4px; }
-  .painel-dash { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 15px; margin-bottom: 15px; }
-  .painel-dash h3 { font-size: 1rem; color: var(--azul-l); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-  
-  .grafico-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 15px; height: 300px; position: relative; }
-  .eventos-lista { height: 150px; overflow-y: auto; font-size: 0.85rem; }
-  .evento-item { border-bottom: 1px solid var(--border); padding: 8px 0; color: var(--muted); }
-  .evento-item strong { color: #fff; display: block; margin-bottom: 2px; }
-
-  @media(max-width: 900px) {
-    .dash-layout { grid-template-columns: 1fr; }
-    .metricas-top { grid-template-columns: repeat(2, 1fr); }
-    .grelha-2, .comp { grid-template-columns: 1fr; }
-    .acoes { flex-direction: column; }
-    .btn { width: 100%; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Sociedades — Escolha o Modo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: #080c11;
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #080c11 70%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        h1 {
+            font-size: clamp(32px, 5vw, 52px);
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+        p.sub {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            margin-bottom: 45px;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px 30px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, transparent, transparent);
+            transition: 0.3s;
+        }
+        .card.simples::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .card.avancado::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+        
+        .card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .card .icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+        }
+        .card:hover .icon { transform: scale(1.1); }
+        .card h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        .card p {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            flex-grow: 1;
+        }
+        .btn {
+            display: inline-block;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.2s;
+        }
+        .card.simples:hover .btn { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
+        .card.avancado:hover .btn { background: #8b5cf6; border-color: #8b5cf6; box-shadow: 0 0 15px rgba(139,92,246,0.5); }
+        
+        .footer {
+            margin-top: 60px;
+            color: #475569;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; gap: 15px; }
+            p.sub { font-size: 1rem; margin-bottom: 30px; }
+            .card { padding: 30px 20px; }
+        }
+    </style>
 </head>
 <body>
-
-<!-- ECRÃ 1: MENU INICIAL -->
-<section id="ecra-menu" class="ecra ativo">
-  <div class="container-centro" style="margin-top: 10vh;">
-    <h1>Simulador de Sociedades</h1>
-    <p class="sub">Teste as suas ideias políticas. Descubra a realidade. Nenhuma decisão é grátis.</p>
-    
-    <div class="grelha-2" style="margin-top: 30px;">
-      <div class="opcao" onclick="iniciarFluxo('simples')" style="text-align: center; padding: 30px 20px;">
-        <div class="ico">🎮</div>
-        <h3>Modo Simples</h3>
-        <p>Escolha um problema e a sua ideologia. Veja os impactos e quem ganha ou perde. (Ideal para leigos e debates)</p>
-      </div>
-      <div class="opcao" onclick="iniciarFluxo('avancado')" style="text-align: center; padding: 30px 20px;">
-        <div class="ico">🔬</div>
-        <h3>Modo Avançado</h3>
-        <p>O laboratório completo. Ajuste cada imposto, veja a economia a reagir ano a ano e a Teoria dos Jogos em tempo real.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ECRÃ 2: ESCOLHA DE PAÍS -->
-<section id="ecra-pais" class="ecra">
-  <div class="container">
-    <h2>1. Escolha o País</h2>
-    <input type="text" id="pesquisa" placeholder="🔍 Pesquisar país..." oninput="filtrarPaises()" style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); color: #fff; font-size: 1rem;">
-    <div id="lista-paises" class="grelha"></div>
-    <div class="acoes">
-      <button class="btn btn-s" onclick="irPara('ecra-menu')">Voltar</button>
-      <button class="btn btn-p" id="btn-pais" disabled onclick="irPara('ecra-ideologia')">Continuar</button>
-    </div>
-  </div>
-</section>
-
-<!-- ECRÃ 3: ESCOLHA DE IDEOLOGIA -->
-<section id="ecra-ideologia" class="ecra">
-  <div class="container">
-    <h2>2. Qual é a sua base política?</h2>
-    <p class="sub">Isto define as políticas iniciais (pode ajustá-las no próximo passo).</p>
-    <div class="grelha-2" style="margin-bottom: 20px;">
-      <div class="opcao" onclick="setIdeologia('esquerda')" id="ide-esq">
-        <div class="check">✓</div><h3>✊ Esquerda</h3><p>Mais impostos, forte Estado social, foco na igualdade e educação.</p>
-      </div>
-      <div class="opcao" onclick="setIdeologia('direita')" id="ide-dir">
-        <div class="check">✓</div><h3>💼 Direita</h3><p>Menos impostos, menos Estado, foco no mercado livre, defesa e produtividade.</p>
-      </div>
-    </div>
-    <div class="opcao" onclick="setIdeologia('centro')" id="ide-cen">
-      <div class="check">✓</div><h3>⚖️ Centro / Moderado</h3><p>Equilíbrio fiscal e redes de segurança. O caminho do meio.</p>
-    </div>
-    
-    <div class="acoes">
-      <button class="btn btn-s" onclick="irPara('ecra-pais')">Voltar</button>
-      <button class="btn btn-p" id="btn-ideologia" onclick="avancarDeIdeologia()">Continuar</button>
-    </div>
-  </div>
-</section>
-
-<!-- ECRÃ 4: AJUSTAR POLÍTICAS (COMUM AOS DOIS MODOS) -->
-<section id="ecra-politicas" class="ecra">
-  <div class="container">
-    <h2>3. Ajuste as Ferramentas</h2>
-    <p class="sub">Estes são os poderes do Estado. Ajuste-os conforme a sua visão.</p>
-    <div id="sliders-politicas" style="margin-bottom: 25px;"></div>
-    <div class="acoes">
-      <button class="btn btn-s" onclick="irPara('ecra-ideologia')">Voltar</button>
-      <button class="btn btn-p" onclick="avancarDePoliticas()">Continuar</button>
-    </div>
-  </div>
-</section>
-
-<!-- ECRÃ 5: FLUXO SIMPLES - PROBLEMA -->
-<section id="ecra-problema" class="ecra">
-  <div class="container">
-    <h2>4. Qual é o maior problema do país?</h2>
-    <div id="lista-problemas" class="grelha" style="grid-template-columns: 1fr;"></div>
-    <div class="acoes">
-      <button class="btn btn-s" onclick="irPara('ecra-politicas')">Voltar</button>
-      <button class="btn btn-p" id="btn-problema" disabled onclick="irPara('ecra-tempo')">Continuar</button>
-    </div>
-  </div>
-</section>
-
-<!-- ECRÃ 6: FLUXO SIMPLES - TEMPO -->
-<section id="ecra-tempo" class="ecra">
-  <div class="container">
-    <h2>5. Em quanto tempo?</h2>
-    <p class="sub">O curto prazo esconde custos. O longo prazo revela a verdade.</p>
-    <div class="grelha-2" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
-      <div class="opcao" onclick="setTempo(this, 10)" style="text-align: center;"><h3>10 Anos</h3><p>Curto Prazo</p></div>
-      <div class="opcao" onclick="setTempo(this, 30)" style="text-align: center;"><h3>30 Anos</h3><p>Uma Geração</p></div>
-      <div class="opcao" onclick="setTempo(this, 100)" style="text-align: center;"><h3>100 Anos</h3><p>Legado</p></div>
-    </div>
-    <div class="acoes">
-      <button class="btn btn-s" onclick="irPara('ecra-problema')">Voltar</button>
-      <button class="btn btn-p" id="btn-tempo" disabled onclick="correrSimples()">Correr Simulação</button>
-    </div>
-  </div>
-</section>
-
-<!-- ECRÃ 7: FLUXO SIMPLES - RESULTADO -->
-<section id="ecra-res-simples" class="ecra">
-  <div class="container-centro">
-    <h2>Veredicto da sua Política</h2>
-    <div id="veredicto" class="veredicto"></div>
-    <div class="comp">
-      <div class="comp-item"><div class="lbl">Sem Mudanças</div><div class="val" id="v-base"></div></div>
-      <div class="comp-item" style="border-color: var(--azul);"><div class="lbl">Com a sua Política</div><div class="val" id="v-int"></div></div>
-      <div class="comp-item"><div class="lbl">Objetivo</div><div class="val" id="v-alvo"></div></div>
-    </div>
-    <button class="btn btn-p" style="width: 100%;" onclick="verImpactosSimples()">Ver Quem Ganhou/Perdeu e Gráficos</button>
-  </div>
-</section>
-
-<!-- ECRÃ 8: FLUXO SIMPLES - IMPACTOS -->
-<section id="ecra-impactos" class="ecra">
-  <div class="container">
-    <h2>Quem Ganhou e Quem Perdeu?</h2>
-    <div class="grelha-2" style="margin-bottom: 20px;">
-      <div class="cartao" style="border-top: 4px solid var(--verde);"><h3 style="color: var(--verde); margin-bottom: 10px;">✓ Ganharam</h3><ul id="lista-ganhou" style="padding-left: 20px; font-size: 0.95rem; line-height: 1.8;"></ul></div>
-      <div class="cartao" style="border-top: 4px solid var(--vermelho);"><h3 style="color: var(--vermelho); margin-bottom: 10px;">✗ Perderam</h3><ul id="lista-perdeu" style="padding-left: 20px; font-size: 0.95rem; line-height: 1.8;"></ul></div>
-    </div>
-    <h2>Gráficos (Base vs Política)</h2>
-    <div id="graficos-simples" class="grelha-2" style="grid-template-columns: 1fr; margin-bottom: 20px;"></div>
-    <div class="acoes">
-      <button class="btn btn-s" onclick="irPara('ecra-res-simples')">Voltar</button>
-      <button class="btn btn-p" onclick="reiniciar()">Jogar Outra Vez</button>
-    </div>
-  </div>
-</section>
-
-<!-- ECRÃ 9: LABORATÓRIO AVANÇADO -->
-<section id="ecra-laboratorio" class="ecra">
-  <div class="container container-largo">
-    <h2>🔬 Laboratório Macroeconómico</h2>
-    <div class="metricas-top">
-      <div class="metrica"><div class="n">Ano</div><div class="v" id="lab-ano">2026</div></div>
-      <div class="metrica"><div class="n">População</div><div class="v" id="lab-pop">0 M</div></div>
-      <div class="metrica"><div class="n">PIB</div><div class="v" id="lab-pib">€0 B</div></div>
-      <div class="metrica"><div class="n">Dívida / PIB</div><div class="v" id="lab-divida">0%</div></div>
-    </div>
-
-    <div class="dash-layout">
-      <!-- Coluna Esquerda: Controlos -->
-      <div>
-        <div class="painel-dash">
-          <h3>Ferramentas do Estado</h3>
-          <div id="sliders-lab"></div>
-          <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn btn-p" style="flex: 1; padding: 10px;" onclick="labAvancar(1)">+1 Ano</button>
-            <button class="btn btn-p" style="flex: 1; padding: 10px;" onclick="labAvancar(10)">+10 Anos</button>
-            <button class="btn btn-p" style="flex: 1; padding: 10px;" onclick="labAvancar(50)">+50 Anos</button>
-          </div>
-          <button class="btn btn-s" style="width: 100%; margin-top: 10px; padding: 10px;" onclick="reiniciar()">Sair / Reiniciar</button>
-        </div>
-
-        <div class="painel-dash">
-          <h3>Eventos Recentes</h3>
-          <div id="lab-eventos" class="eventos-lista"></div>
-        </div>
-      </div>
-
-      <!-- Coluna Direita: Gráficos e Teoria dos Jogos -->
-      <div>
-        <div class="grafico-box" style="margin-bottom: 15px; height: 350px;">
-          <canvas id="lab-chart"></canvas>
+    <div class="container">
+        <h1>Simulador de Sociedades</h1>
+        <p class="sub">Teste as suas ideias políticas. Descubra a realidade. Nenhuma decisão é neutra ou grátis.<br><br>Escolha a experiência que deseja ter:</p>
+        
+        <div class="grid">
+            <!-- Link para o simulador original -->
+            <a href="simulador.html" class="card simples">
+                <div class="icon">🎮</div>
+                <h2>O Jogo das Decisões</h2>
+                <p>O modo narrativo. Escolha o país, a sua ideologia, o problema a resolver e veja o veredicto da realidade. Descubra quem ganha, quem perde e os efeitos colaterais. Ideal para iniciantes e debates.</p>
+                <div class="btn">Entrar no Jogo →</div>
+            </a>
+            
+            <!-- Link para o simulador XPTO original -->
+            <a href="simuladorXPTO.html" class="card avancado">
+                <div class="icon">🔬</div>
+                <h2>Laboratório Macroeconómico</h2>
+                <p>O modo avançado. O painel completo de dinâmica de sistemas e teoria dos jogos. Ajuste cada imposto, veja a economia a reagir ano a ano, acompanhe eventos aleatórios e o poder estratégico.</p>
+                <div class="btn">Entrar no Laboratório →</div>
+            </a>
         </div>
         
-        <div class="painel-dash">
-          <h3>Teoria dos Jogos e Sociedade</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9rem;">
-            <div>
-              <div style="color: var(--muted); margin-bottom: 5px;">Poder Estratégico</div>
-              <div style="font-size: 1.2rem; font-weight: bold; color: var(--azul-l);" id="lab-poder">0/100</div>
-            </div>
-            <div>
-              <div style="color: var(--muted); margin-bottom: 5px;">Estabilidade Social</div>
-              <div style="font-size: 1.2rem; font-weight: bold; color: var(--verde);" id="lab-estabilidade">0/100</div>
-            </div>
-            <div>
-              <div style="color: var(--muted); margin-bottom: 5px;">Desigualdade</div>
-              <div style="font-size: 1.2rem; font-weight: bold; color: var(--amarelo);" id="lab-desigualdade">0/100</div>
-            </div>
-            <div>
-              <div style="color: var(--muted); margin-bottom: 5px;">Automação</div>
-              <div style="font-size: 1.2rem; font-weight: bold; color: var(--text);" id="lab-automacao">0%</div>
-            </div>
-          </div>
+        <div class="footer">
+            Simulação Matemática · Teoria dos Jogos · Dinâmica de Sistemas
         </div>
-      </div>
     </div>
-  </div>
-</section>
-
-<script>
-/* =========================================================
-   DADOS E CONFIGURAÇÕES
-   ========================================================= */
-let COUNTRIES = typeof PAISES_MUNDO !== "undefined" ? PAISES_MUNDO : {
-  "portugal": { nome: "Portugal", icone: "🇵🇹", populacao: 10400000, pib_per_capita: 25000, divida_pct_pib: 1.0, fertilidade_inicial: 1.45, esperanca: 82, migracao: 30000 }
-};
-
-const PROBLEMS = {
-  "1": { titulo: "Envelhecimento Populacional", desc: "A fertilidade é baixa e a população está a envelhecer.", varName: "fertility", target: 2.1, unit: "filhos/mulher" },
-  "2": { titulo: "Dívida Pública Insustentável", desc: "O Estado gasta muito mais do que arrecada.", varName: "debtRatio", target: 60, unit: "% do PIB" },
-  "3": { titulo: "Desemprego Elevado", desc: "Falta de oportunidades de trabalho.", varName: "unemployment", target: 4, unit: "%" },
-  "4": { titulo: "Crise na Habitação", desc: "As casas estão caras e há falta de construção.", varName: "housing", target: 80, unit: "índice" }
-};
-
-const IDEOLOGIAS = {
-  esquerda: { tax: 45, education: 6.5, health: 8.0, migration: 20000, defense: 1.0, automation: 5 },
-  centro: { tax: 34, education: 5.0, health: 7.0, migration: 40000, defense: 2.0, automation: 10 },
-  direita: { tax: 25, education: 4.0, health: 5.5, migration: 10000, defense: 3.5, automation: 15 }
-};
-
-const state = {
-  modo: null, countryKey: null, countryData: null, ideology: null,
-  policies: { tax: 34, education: 5, health: 7, migration: 40000, defense: 2, automation: 10 },
-  problem: null, years: 30,
-  historyBase: [], historyInt: [],
-  lab: { currentYear: 0, stateObj: null, history: [], events: [] }
-};
-
-/* =========================================================
-   MOTOR MATEMÁTICO (O Cérebro do Simulador)
-   ========================================================= */
-function runEngine(config, years) {
-  let state = {
-    pop: config.pop, gdp: config.pib, debtRatio: config.div, fertility: config.fert, lifeExpectancy: config.esperanca,
-    migration: config.migracao, tax: config.tax, education: config.education, health: config.health,
-    defense: config.defense, automation: config.automation, 
-    housing: 65, productivity: 100, unemployment: 6, inequality: 30, stability: 70, 
-    worldTension: 20, cooperation: 60, technologyRace: 30, strategicPower: 50
-  };
-  let history = [];
-
-  for (let i = 0; i < years; i++) {
-    // Demografia
-    let birthRate = 0.007 + (state.fertility * 0.0035);
-    let mortalityRate = state.lifeExpectancy > 82 ? 0.008 : 0.011;
-    state.pop += (state.pop * birthRate) - (state.pop * mortalityRate) + state.migration;
-    
-    let fertPressure = (state.housing < 50 ? -0.015 : 0) + (state.unemployment > 10 ? -0.02 : 0) + (state.gdp / state.pop < 20000 ? -0.015 : 0);
-    state.fertility = Math.max(0.7, Math.min(3.5, state.fertility + fertPressure + (2.1 - state.fertility) * 0.01));
-
-    // Economia
-    let prodGrowth = 0.01 + (state.automation * 0.001) + (state.education * 0.002);
-    state.productivity *= (1 + prodGrowth);
-
-    // Desemprego
-    let displacement = state.automation * 0.05;
-    let jobCreation = (state.productivity - 100) * 0.02;
-    state.unemployment = Math.max(2, Math.min(30, state.unemployment + (displacement - jobCreation) * 0.1));
-
-    // PIB
-    let realGrowth = prodGrowth - Math.max(0, state.unemployment - 5) / 1000;
-    state.gdp *= (1 + realGrowth);
-
-    // Habitação
-    let popGrowth = (state.pop - (state.pop / (1 + birthRate - mortalityRate))) / state.pop;
-    state.housing = Math.max(10, Math.min(100, state.housing - (popGrowth * 100) + (state.gdp / state.pop > 30000 ? 0.5 : 0)));
-
-    // Dívida
-    let taxRev = state.gdp * (state.tax / 100);
-    let spend = state.gdp * ((state.education + state.health + state.defense) / 100);
-    state.debtRatio = Math.max(0, state.debtRatio + ((spend - taxRev) / state.gdp) * 100 - realGrowth * 10);
-
-    // Sociedade
-    if (state.automation > 20) state.inequality += 0.1;
-    if (state.education > 5) state.inequality -= 0.1;
-    if (state.unemployment > 10) state.inequality += 0.2;
-    state.inequality = Math.max(10, Math.min(70, state.inequality));
-
-    let socialPressure = 20 + (state.housing < 50 ? 15 : 0) + (state.unemployment > 10 ? 15 : 0) + (state.inequality > 40 ? 10 : 0);
-    state.stability = Math.max(0, Math.min(100, 80 - (socialPressure * 0.4) + (state.education * 2)));
-
-    // Teoria dos Jogos
-    state.technologyRace = Math.min(100, state.technologyRace + (state.automation * 0.1));
-    state.cooperation = Math.max(0, Math.min(100, 50 + (state.stability * 0.2) - (state.worldTension * 0.3)));
-    state.strategicPower = Math.min(100, (state.gdp / 1e9) * 0.1 + state.technologyRace * 0.5 + state.stability * 0.4);
-
-    history.push({
-      year: i + 1, pop: state.pop / 1000000, gdp: state.gdp / 1000000000,
-      fertility: state.fertility, debtRatio: state.debtRatio, unemployment: state.unemployment,
-      housing: state.housing, productivity: state.productivity, automation: state.automation,
-      inequality: state.inequality, stability: state.stability, technologyRace: state.technologyRace, strategicPower: state.strategicPower
-    });
-  }
-  return { final: state, history };
-}
-
-/* =========================================================
-   NAVEGAÇÃO E LÓGICA COMUM
-   ========================================================= */
-function irPara(id) {
-  document.querySelectorAll(".ecra").forEach(e => e.classList.remove("ativo"));
-  document.getElementById(id).classList.add("ativo");
-  window.scrollTo(0, 0);
-}
-
-function iniciarFluxo(modo) {
-  state.modo = modo;
-  irPara("ecra-pais");
-  renderPaises();
-}
-
-function renderPaises(filtro = "") {
-  const c = document.getElementById("lista-paises");
-  c.innerHTML = "";
-  const sorted = Object.keys(COUNTRIES).sort((a, b) => COUNTRIES[a].nome.localeCompare(COUNTRIES[b].nome));
-  
-  for (const key of sorted) {
-    const p = COUNTRIES[key];
-    if (filtro && !p.nome.toLowerCase().includes(filtro.toLowerCase())) continue;
-    
-    const div = document.createElement("div");
-    div.className = "opcao";
-    div.innerHTML = `<div class="check">✓</div><div class="ico">${p.icone || '🌍'}</div><h3>${p.nome}</h3><p>Pop: ${(p.populacao/1e6).toFixed(1)}M</p>`;
-    
-    div.onclick = () => {
-      document.querySelectorAll("#lista-paises .opcao").forEach(e => e.classList.remove("sel"));
-      div.classList.add("sel");
-      state.countryKey = key;
-      state.countryData = p;
-      document.getElementById("btn-pais").disabled = false;
-    };
-    c.appendChild(div);
-  }
-}
-function filtrarPaises() { renderPaises(document.getElementById("pesquisa").value); }
-
-function setIdeologia(id) {
-  state.ideology = id;
-  document.querySelectorAll("#ecra-ideologia .opcao").forEach(e => e.classList.remove("sel"));
-  document.getElementById(id === 'esquerda' ? 'ide-esq' : id === 'direita' ? 'ide-dir' : 'ide-cen').classList.add("sel");
-  state.policies = { ...IDEOLOGIAS[id] };
-}
-
-function avancarDeIdeologia() {
-  if (!state.ideology) return alert("Escolha uma ideologia.");
-  renderSlidersComuns();
-  irPara("ecra-politicas");
-}
-
-/* =========================================================
-   SLIDERS COMUNS E AVANÇO PARA OS MODOS
-   ========================================================= */
-function renderSlidersComuns() {
-  const c = document.getElementById("sliders-politicas");
-  c.innerHTML = "";
-  const labels = { tax: "Impostos (%)", education: "Educação (% PIB)", health: "Saúde (% PIB)", migration: "Imigração/ano", defense: "Defesa (% PIB)", automation: "Automação (%)" };
-  const mins = { tax: 10, education: 2, health: 2, migration: 0, defense: 0.5, automation: 0 };
-  const maxs = { tax: 60, education: 10, health: 12, migration: 200000, defense: 10, automation: 30 };
-
-  for (const [key, label] of Object.entries(labels)) {
-    const div = document.createElement("div");
-    div.className = "slider-grupo";
-    div.innerHTML = `
-      <label>${label} <span id="val-${key}">${state.policies[key].toLocaleString()}</span></label>
-      <input type="range" id="inp-${key}" min="${mins[key]}" max="${maxs[key]}" step="${key === 'migration' ? 5000 : key === 'automation' ? 1 : 0.5}" value="${state.policies[key]}">
-    `;
-    c.appendChild(div);
-    document.getElementById(`inp-${key}`).oninput = (e) => {
-      state.policies[key] = Number(e.target.value);
-      document.getElementById(`val-${key}`).textContent = Number(e.target.value).toLocaleString();
-    };
-  }
-}
-
-function avancarDePoliticas() {
-  if (state.modo === 'simples') {
-    renderProblemas();
-    irPara("ecra-problema");
-  } else {
-    iniciarLaboratorio();
-  }
-}
-
-/* =========================================================
-   FLUXO SIMPLES
-   ========================================================= */
-function renderProblemas() {
-  const c = document.getElementById("lista-problemas");
-  c.innerHTML = "";
-  for (const [key, p] of Object.entries(PROBLEMS)) {
-    const div = document.createElement("div");
-    div.className = "opcao";
-    div.innerHTML = `<div class="check">✓</div><h3>${p.titulo}</h3><p>${p.desc}</p>`;
-    div.onclick = () => {
-      document.querySelectorAll("#lista-problemas .opcao").forEach(e => e.classList.remove("sel"));
-      div.classList.add("sel");
-      state.problem = key;
-      document.getElementById("btn-problema").disabled = false;
-    };
-    c.appendChild(div);
-  }
-}
-
-function setTempo(el, anos) {
-  document.querySelectorAll("#ecra-tempo .opcao").forEach(e => e.classList.remove("sel"));
-  el.classList.add("sel");
-  state.years = anos;
-  document.getElementById("btn-tempo").disabled = false;
-}
-
-function correrSimples() {
-  const cData = state.countryData;
-  const pop = cData.populacao || cData.pop;
-  const pibTotal = cData.pib || (cData.populacao * cData.pib_per_capita);
-  const div = cData.divida_pct_pib ? (cData.divida_pct_pib * 100) : (cData.div || 100);
-  const fert = cData.fertilidade_inicial || cData.fert || 1.5;
-  const esperanca = cData.esperanca || 80;
-  const migracao = cData.migracao || (pop * 0.002);
-
-  const baseConfig = { pop, pib: pibTotal, div, fert, esperanca, migracao, tax: 30, education: 5, health: 7, defense: 2, automation: 10 };
-  const intConfig = { ...baseConfig, ...state.policies };
-
-  state.historyBase = runEngine(baseConfig, state.years).history;
-  const resInt = runEngine(intConfig, state.years);
-  state.historyInt = resInt.history;
-
-  // Veredicto
-  const prob = PROBLEMS[state.problem];
-  const baseLast = state.historyBase[state.historyBase.length - 1];
-  const intLast = state.historyInt[state.historyInt.length - 1];
-  
-  let bVal = baseLast[prob.varName];
-  let iVal = intLast[prob.varName];
-  let target = prob.target;
-
-  document.getElementById("v-base").textContent = bVal.toFixed(1) + (prob.unit === "%" || prob.unit === "% do PIB" ? "%" : "");
-  document.getElementById("v-int").textContent = iVal.toFixed(1) + (prob.unit === "%" || prob.unit === "% do PIB" ? "%" : "");
-  document.getElementById("v-alvo").textContent = target.toFixed(1) + (prob.unit === "%" || prob.unit === "% do PIB" ? "%" : "");
-
-  const ve = document.getElementById("veredicto");
-  const diffBase = Math.abs(bVal - target);
-  const diffInt = Math.abs(iVal - target);
-
-  if (diffInt < diffBase) {
-    ve.className = "veredicto v-bom";
-    ve.textContent = "✓✓✓ As suas políticas funcionaram. Objetivo quase atingido.";
-  } else if (diffInt > diffBase * 1.1) {
-    ve.className = "veredicto v-mau";
-    ve.textContent = "✗✗✗ As suas políticas agravaram o problema.";
-  } else {
-    ve.className = "veredicto v-neutro";
-    ve.textContent = "✗ Não conseguiu atingir o objetivo.";
-  }
-
-  irPara("ecra-res-simples");
-}
-
-function verImpactosSimples() {
-  const b = state.historyBase[state.historyBase.length - 1];
-  const i = state.historyInt[state.historyInt.length - 1];
-  const g = [], p = [];
-
-  if (i.gdp > b.gdp * 1.02) g.push("📈 Empresários (Economia cresceu)");
-  if (i.gdp < b.gdp * 0.98) p.push("📉 Empresários (Economia encolheu)");
-  if (i.unemployment < b.unemployment - 1) g.push("👷 Trabalhadores (Mais empregos)");
-  if (i.unemployment > b.unemployment + 1) p.push("😟 Trabalhadores (Mais desemprego)");
-  if (i.debtRatio < b.debtRatio - 5) g.push("💳 Contribuintes (Dívida baixou)");
-  if (i.debtRatio > b.debtRatio + 5) p.push("💳 Contribuintes (Dívida explodiu)");
-  if (i.inequality < b.inequality - 2) g.push("⚖️ Classe Baixa (Desigualdade reduziu)");
-  if (i.inequality > b.inequality + 2) p.push("⚖️ Classe Baixa (Desigualdade aumentou)");
-
-  document.getElementById("lista-ganhou").innerHTML = g.length ? g.map(x => `<li>${x}</li>`).join("") : "<li>Ninguém em particular</li>";
-  document.getElementById("lista-perdeu").innerHTML = p.length ? p.map(x => `<li>${x}</li>`).join("") : "<li>Ninguém em particular</li>";
-
-  // Gráficos
-  const cGraficos = document.getElementById("graficos-simples");
-  cGraficos.innerHTML = "";
-  const charts = [
-    { id: "cg-1", title: "PIB (Mil Milhões €)", base: state.historyBase.map(x=>x.gdp), int: state.historyInt.map(x=>x.gdp) },
-    { id: "cg-2", title: "Dívida (% PIB)", base: state.historyBase.map(x=>x.debtRatio), int: state.historyInt.map(x=>x.debtRatio) },
-    { id: "cg-3", title: "Desemprego (%)", base: state.historyBase.map(x=>x.unemployment), int: state.historyInt.map(x=>x.unemployment) }
-  ];
-  
-  const labels = state.historyBase.map(x => "Ano " + x.year);
-  
-  charts.forEach(c => {
-    let div = document.createElement("div");
-    div.className = "cartao";
-    div.innerHTML = `<h3 style="font-size: 1rem; margin-bottom: 10px;">${c.title}</h3><div style="height: 200px;"><canvas id="${c.id}"></canvas></div>`;
-    cGraficos.appendChild(div);
-    
-    new Chart(document.getElementById(c.id), {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Base', data: c.base, borderColor: '#94a3b8', borderWidth: 2, pointRadius: 0 },
-          { label: 'Com Política', data: c.int, borderColor: '#60a5fa', borderWidth: 2, pointRadius: 0 }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' }, grid: { display: false } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } } } }
-    });
-  });
-
-  irPara("ecra-impactos");
-}
-
-/* =========================================================
-   MODO AVANÇADO (LABORATÓRIO)
-   ========================================================= */
-function iniciarLaboratorio() {
-  const cData = state.countryData;
-  const pop = cData.populacao || cData.pop;
-  const pib = cData.pib || (cData.populacao * cData.pib_per_capita);
-  const div = cData.divida_pct_pib ? (cData.divida_pct_pib * 100) : (cData.div || 100);
-  const fert = cData.fertilidade_inicial || cData.fert || 1.5;
-  const esperanca = cData.esperanca || 80;
-  const migracao = cData.migracao || (pop * 0.002);
-
-  // Configuração inicial
-  const config = { pop, pib, div, fert, esperanca, migracao, ...state.policies };
-  
-  // Inicializa o estado do laboratório
-  state.lab.stateObj = {
-    pop: config.pop, gdp: config.pib, debtRatio: config.div, fertility: config.fert, lifeExpectancy: config.esperanca,
-    migration: config.migracao, tax: config.tax, education: config.education, health: config.health,
-    defense: config.defense, automation: config.automation, 
-    housing: 65, productivity: 100, unemployment: 6, inequality: 30, stability: 70, 
-    worldTension: 20, cooperation: 60, technologyRace: 30, strategicPower: 50
-  };
-  
-  state.lab.currentYear = 2026;
-  state.lab.history = [];
-  state.lab.events = [{ ano: 2026, titulo: "Simulação Iniciada", desc: "Laboratório ligado." }];
-  
-  // Primeiro snapshot
-  snapshotLab();
-  
-  renderSlidersLab();
-  atualizarUILab();
-  irPara("ecra-laboratorio");
-}
-
-function renderSlidersLab() {
-  const c = document.getElementById("sliders-lab");
-  c.innerHTML = "";
-  const labels = { tax: "Impostos (%)", education: "Educação (% PIB)", health: "Saúde (% PIB)", migration: "Imigração/ano", defense: "Defesa (% PIB)", automation: "Automação (%)" };
-  const mins = { tax: 10, education: 2, health: 2, migration: 0, defense: 0.5, automation: 0 };
-  const maxs = { tax: 60, education: 10, health: 12, migration: 200000, defense: 10, automation: 30 };
-
-  for (const [key, label] of Object.entries(labels)) {
-    const div = document.createElement("div");
-    div.className = "slider-grupo";
-    div.innerHTML = `
-      <label>${label} <span id="lab-val-${key}">${state.lab.stateObj[key].toLocaleString()}</span></label>
-      <input type="range" id="lab-inp-${key}" min="${mins[key]}" max="${maxs[key]}" step="${key === 'migration' ? 5000 : key === 'automation' ? 1 : 0.5}" value="${state.lab.stateObj[key]}">
-    `;
-    c.appendChild(div);
-    document.getElementById(`lab-inp-${key}`).oninput = (e) => {
-      const v = Number(e.target.value);
-      state.lab.stateObj[key] = v;
-      document.getElementById(`lab-val-${key}`).textContent = v.toLocaleString();
-    };
-  }
-}
-
-function snapshotLab() {
-  const s = state.lab.stateObj;
-  state.lab.history.push({
-    year: state.lab.currentYear, pop: s.pop / 1e6, gdp: s.gdp / 1e9,
-    debtRatio: s.debtRatio, unemployment: s.unemployment, stability: s.stability, inequality: s.inequality
-  });
-}
-
-function labAvancar(anos) {
-  // Roda o motor para X anos, mas passo a passo para guardar o histórico
-  for (let a = 0; a < anos; a++) {
-    const s = state.lab.stateObj;
-    const res = runEngine({
-      pop: s.pop, pib: s.gdp, div: s.debtRatio, fert: s.fertility, esperanca: s.lifeExpectancy,
-      migracao: s.migration, tax: s.tax, education: s.education, health: s.health, defense: s.defense, automation: s.automation
-    }, 1); // Roda 1 ano de cada vez
-    
-    // Atualiza o estado com os resultados
-    Object.assign(state.lab.stateObj, res.final);
-    state.lab.currentYear++;
-    snapshotLab();
-
-    // Eventos aleatórios (15% chance por ano)
-    if (Math.random() > 0.85) {
-      const evs = [
-        { t: "Crise Energética", d: "Custo sobe, inflação afeta estabilidade.", f: () => { state.lab.stateObj.gdp *= 0.98; state.lab.stateObj.stability -= 2; } },
-        { t: "Salto Tecnológico", d: "Automação e produtividade disparam.", f: () => { state.lab.stateObj.automation += 2; state.lab.stateObj.technologyRace += 5; } },
-        { t: "Acordo Comercial", d: "Economia acelera.", f: () => { state.lab.stateObj.gdp *= 1.02; } }
-      ];
-      const ev = evs[Math.floor(Math.random() * evs.length)];
-      ev.f();
-      state.lab.events.unshift({ ano: state.lab.currentYear, titulo: ev.t, desc: ev.d });
-    }
-  }
-  atualizarUILab();
-}
-
-let labChartInstance = null;
-function atualizarUILab() {
-  const s = state.lab.stateObj;
-  
-  document.getElementById("lab-ano").textContent = state.lab.currentYear;
-  document.getElementById("lab-pop").textContent = (s.pop / 1e6).toFixed(1) + " M";
-  document.getElementById("lab-pib").textContent = "€" + (s.gdp / 1e9).toFixed(0) + " B";
-  document.getElementById("lab-divida").textContent = s.debtRatio.toFixed(0) + "%";
-  
-  document.getElementById("lab-poder").textContent = s.strategicPower.toFixed(0) + "/100";
-  document.getElementById("lab-estabilidade").textContent = s.stability.toFixed(0) + "/100";
-  document.getElementById("lab-desigualdade").textContent = s.inequality.toFixed(0) + "/100";
-  document.getElementById("lab-automacao").textContent = s.automation.toFixed(1) + "%";
-
-  // Eventos
-  const evBox = document.getElementById("lab-eventos");
-  evBox.innerHTML = state.lab.events.map(e => `<div class="evento-item"><strong>${e.ano} - ${e.titulo}</strong>${e.desc}</div>`).join("");
-
-  // Gráfico
-  const ctx = document.getElementById('lab-chart').getContext('2d');
-  const labels = state.lab.history.map(h => h.year);
-  
-  if (labChartInstance) labChartInstance.destroy();
-  
-  labChartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        { label: 'PIB (B €)', data: state.lab.history.map(h => h.gdp), borderColor: '#60a5fa', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
-        { label: 'Dívida %', data: state.lab.history.map(h => h.debtRatio), borderColor: '#ef4444', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#e8edf3' } } },
-      scales: {
-        x: { ticks: { color: '#8d9baa' }, grid: { display: false } },
-        y: { type: 'linear', display: true, position: 'left', ticks: { color: '#60a5fa' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y1: { type: 'linear', display: true, position: 'right', ticks: { color: '#ef4444' }, grid: { drawOnChartArea: false } }
-      }
-    }
-  });
-}
-
-/* =========================================================
-   REINICIAR
-   ========================================================= */
-function reiniciar() {
-  state.countryKey = null; state.ideology = null; state.problem = null;
-  document.querySelectorAll(".opcao").forEach(e => e.classList.remove("sel"));
-  document.querySelectorAll("input[type='range']").forEach(e => e.value = e.min);
-  document.getElementById("btn-pais").disabled = true;
-  document.getElementById("btn-problema").disabled = true;
-  document.getElementById("btn-tempo").disabled = true;
-  document.getElementById("pesquisa").value = "";
-  irPara("ecra-menu");
-}
-</script>
 </body>
 </html>
