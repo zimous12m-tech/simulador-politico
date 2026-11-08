@@ -4,7 +4,7 @@
 
 A maioria de nós acha que tem a solução perfeita para o país. Mas nenhuma política é neutra ou grátis. Este projeto usa um motor profundo de dinâmica de sistemas e teoria dos jogos para testar as convicções políticas (de esquerda, direita, centro ou leigos).
 
-🌐 **[Clique aqui para abrir o Simulador Online](https://zimous12m-tech.github.io/NOME-DA-TUA-PASTA/)**
+🌐 **[Clique aqui para abrir o Simulador Online](https://zimous12m-tech.github.io/simulador-politico/)**
 
 ---
 
@@ -13,7 +13,7 @@ A maioria de nós acha que tem a solução perfeita para o país. Mas nenhuma po
 O simulador está dividido em duas experiências distintas:
 
 ### 1. O Jogo das Decisões (Modo Simples)
-Ideal para iniciantes e debates. 
+Ideal para iniciantes e debates.
 * Escolhes o país, a tua ideologia base, o problema a resolver (ex: Habitação, Dívida, Desemprego) e as ferramentas.
 * O simulador corre décadas e mostra um **veredicto** claro.
 * Descobres os efeitos colaterais e, o mais importante, **quem ganhou e quem perdeu** na sociedade.
@@ -35,7 +35,7 @@ Para quem adora dados e teoria dos jogos.
 ---
 
 ## ⚠️ Nota Importante
-As projeções geradas são **simulações matemáticas baseadas em dinâmicas macroeconómicas**. Não representam uma verdade absoluta, mas sim as consequências lógicas e os *trade-offs* inerentes às escolhas políticas. 
+As projeções geradas são **simulações matemáticas baseadas em dinâmicas macroeconómicas**. Não representam uma verdade absoluta, mas sim as consequências lógicas e os *trade-offs* inerentes às escolhas políticas.
 
 ---
 *Desenvolvido por Zimous · 2026*
