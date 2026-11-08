@@ -1,0 +1,2927 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Social — Teoria dos Jogos</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    background:#080c11;
+    color:#e8edf3;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+header{
+    background:#101720;
+    border-bottom:1px solid #263442;
+    padding:18px 24px;
+}
+
+header h1{
+    margin:0 0 5px;
+    font-size:24px;
+}
+
+header p{
+    margin:0;
+    color:#8d9baa;
+    font-size:13px;
+}
+
+.container{
+    max-width:1700px;
+    margin:auto;
+    padding:18px;
+}
+
+.controls{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:12px;
+    margin-bottom:18px;
+}
+
+.panel{
+    background:#101720;
+    border:1px solid #263442;
+    border-radius:10px;
+    padding:15px;
+    margin-bottom:15px;
+}
+
+.panel h2{
+    margin:0 0 13px;
+    font-size:15px;
+    color:#c2ceda;
+}
+
+label{
+    display:block;
+    font-size:12px;
+    color:#8f9baa;
+    margin:8px 0 5px;
+}
+
+input,select,button{
+    width:100%;
+    border:1px solid #344352;
+    background:#0a1016;
+    color:#e9eef4;
+    padding:9px;
+    border-radius:6px;
+}
+
+input:focus,select:focus{
+    outline:none;
+    border-color:#537b98;
+}
+
+button{
+    cursor:pointer;
+    background:#182632;
+    margin-top:7px;
+}
+
+button:hover{
+    background:#253847;
+}
+
+button.primary{
+    background:#315b78;
+}
+
+button.danger{
+    background:#6c3333;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-bottom:18px;
+}
+
+.metric{
+    background:#101720;
+    border:1px solid #263442;
+    border-radius:10px;
+    padding:15px;
+}
+
+.metric .name{
+    color:#8997a5;
+    font-size:12px;
+}
+
+.metric .value{
+    font-size:24px;
+    font-weight:bold;
+    margin-top:5px;
+}
+
+.metric .change{
+    font-size:11px;
+    margin-top:5px;
+    color:#7e9aab;
+}
+
+.layout{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:15px;
+}
+
+canvas{
+    width:100%;
+    height:350px;
+    background:#090e13;
+    border-radius:7px;
+}
+
+.chart-tabs{
+    display:flex;
+    gap:5px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+}
+
+.chart-tabs button{
+    width:auto;
+    margin:0;
+    font-size:12px;
+    padding:7px 11px;
+}
+
+.chart-tabs button.active{
+    background:#315b78;
+}
+
+.events{
+    height:350px;
+    overflow:auto;
+}
+
+.event{
+    border-bottom:1px solid #263442;
+    padding:9px 2px;
+    font-size:12px;
+}
+
+.event strong{
+    color:#cbd7e3;
+}
+
+.event small{
+    display:block;
+    color:#778592;
+    margin-top:3px;
+    line-height:1.4;
+}
+
+.decisions{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:8px;
+}
+
+.decision{
+    padding:10px;
+    border:1px solid #263442;
+    border-radius:7px;
+    background:#0c131a;
+}
+
+.decision strong{
+    display:block;
+    font-size:12px;
+    margin-bottom:5px;
+}
+
+.decision span{
+    display:block;
+    color:#7f8c98;
+    font-size:10px;
+    margin-bottom:6px;
+}
+
+.strategy-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+}
+
+.strategy{
+    border:1px solid #263442;
+    border-radius:7px;
+    padding:10px;
+    background:#0b1218;
+}
+
+.strategy strong{
+    display:block;
+    font-size:12px;
+}
+
+.strategy span{
+    color:#7f8c98;
+    font-size:10px;
+}
+
+pre{
+    white-space:pre-wrap;
+    word-break:break-word;
+    background:#080d12;
+    padding:12px;
+    border-radius:6px;
+    color:#aab8c5;
+    font-size:11px;
+    line-height:1.5;
+}
+
+.good{color:#70b58a}
+.bad{color:#c97878}
+.neutral{color:#a7b4c0}
+
+.badge{
+    display:inline-block;
+    padding:3px 7px;
+    border-radius:5px;
+    background:#17232d;
+    color:#8fa5b5;
+    font-size:10px;
+    margin-left:5px;
+}
+
+@media(max-width:1000px){
+    .grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .layout{
+        grid-template-columns:1fr;
+    }
+
+    .strategy-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+@media(max-width:600px){
+    .grid{
+        grid-template-columns:1fr;
+    }
+
+    .decisions,
+    .strategy-grid{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>SIMULADOR SOCIAL — DINÂMICA DE SOCIEDADES</h1>
+    <p>Nenhuma política é neutra. Nenhuma é grátis. Nenhuma decisão existe isoladamente.</p>
+</header>
+
+<div class="container">
+
+<!-- =====================================================
+     CONFIGURAÇÃO
+====================================================== -->
+
+<div class="controls">
+
+    <div class="panel">
+        <h2>Sociedade</h2>
+
+        <label>Nome</label>
+        <input id="countryName" value="Portugal">
+
+        <label>População inicial</label>
+        <input id="population" type="number" value="10600000">
+
+        <label>Ano inicial</label>
+        <input id="startYear" type="number" value="2026">
+    </div>
+
+    <div class="panel">
+        <h2>Demografia</h2>
+
+        <label>Fertilidade</label>
+        <input id="fertility" type="number" step="0.01" value="1.45">
+
+        <label>Esperança de vida</label>
+        <input id="lifeExpectancy" type="number" step="0.1" value="82">
+
+        <label>Migração líquida / ano</label>
+        <input id="migration" type="number" value="30000">
+    </div>
+
+    <div class="panel">
+        <h2>Economia</h2>
+
+        <label>PIB inicial (€)</label>
+        <input id="gdp" type="number" value="280000000000">
+
+        <label>Inflação (%)</label>
+        <input id="inflation" type="number" step="0.1" value="2">
+
+        <label>Dívida / PIB (%)</label>
+        <input id="debtRatio" type="number" step="1" value="100">
+    </div>
+
+    <div class="panel">
+        <h2>Estrutura produtiva</h2>
+
+        <label>Indústria (%)</label>
+        <input id="industry" type="number" value="13">
+
+        <label>Turismo/serviços (%)</label>
+        <input id="tourism" type="number" value="25">
+
+        <label>Automação (%)</label>
+        <input id="automation" type="number" step="0.1" value="10">
+    </div>
+
+    <div class="panel">
+        <h2>Estado</h2>
+
+        <label>Impostos (%)</label>
+        <input id="tax" type="number" step="0.1" value="34">
+
+        <label>Educação (% PIB)</label>
+        <input id="education" type="number" step="0.1" value="5">
+
+        <label>Saúde (% PIB)</label>
+        <input id="health" type="number" step="0.1" value="7">
+    </div>
+
+    <div class="panel">
+        <h2>Simulação</h2>
+
+        <label>Anos a simular</label>
+
+        <!-- ALTERADO:
+             agora é livre -->
+        <input
+            id="horizon"
+            type="number"
+            value="50"
+            min="1"
+            max="2000"
+            step="1"
+        >
+
+        <button class="primary" onclick="runSimulation()">
+            ▶ Simular
+        </button>
+
+        <button onclick="advanceOneYear()">
+            + 1 ano
+        </button>
+
+        <button onclick="resetSimulation()">
+            ↺ Reiniciar
+        </button>
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MÉTRICAS
+====================================================== -->
+
+<div class="grid">
+
+    <div class="metric">
+        <div class="name">ANO</div>
+        <div class="value" id="mYear">2026</div>
+        <div class="change">tempo simulado</div>
+    </div>
+
+    <div class="metric">
+        <div class="name">POPULAÇÃO</div>
+        <div class="value" id="mPopulation">10,6 M</div>
+        <div class="change" id="mPopulationChange"></div>
+    </div>
+
+    <div class="metric">
+        <div class="name">PIB</div>
+        <div class="value" id="mGDP">€280 B</div>
+        <div class="change" id="mGDPChange"></div>
+    </div>
+
+    <div class="metric">
+        <div class="name">PIB / HABITANTE</div>
+        <div class="value" id="mGDPpc">€26.415</div>
+    </div>
+
+    <div class="metric">
+        <div class="name">FERTILIDADE</div>
+        <div class="value" id="mFertility">1.45</div>
+    </div>
+
+    <div class="metric">
+        <div class="name">DÍVIDA / PIB</div>
+        <div class="value" id="mDebt">100%</div>
+    </div>
+
+    <div class="metric">
+        <div class="name">AUTOMAÇÃO</div>
+        <div class="value" id="mAutomation">10%</div>
+    </div>
+
+    <div class="metric">
+        <div class="name">ESTABILIDADE</div>
+        <div class="value" id="mStability">70</div>
+    </div>
+
+</div>
+
+
+<div class="layout">
+
+<main>
+
+<!-- =====================================================
+     GRÁFICOS
+====================================================== -->
+
+<div class="panel">
+
+    <div class="chart-tabs">
+
+        <button class="active"
+                onclick="showChart('population',this)">
+            População
+        </button>
+
+        <button onclick="showChart('economy',this)">
+            Economia
+        </button>
+
+        <button onclick="showChart('demography',this)">
+            Demografia
+        </button>
+
+        <button onclick="showChart('society',this)">
+            Sociedade
+        </button>
+
+        <button onclick="showChart('structure',this)">
+            Estrutura
+        </button>
+
+        <button onclick="showChart('game',this)">
+            Teoria dos Jogos
+        </button>
+
+    </div>
+
+    <canvas id="chart"></canvas>
+
+</div>
+
+
+<!-- =====================================================
+     DECISÕES
+====================================================== -->
+
+<div class="panel">
+
+<h2>
+    Decisões políticas
+    <span class="badge">estratégia doméstica</span>
+</h2>
+
+<div class="decisions">
+
+    <div class="decision">
+        <strong>Industrialização</strong>
+        <span>+ indústria / + produtividade / custo fiscal</span>
+        <button onclick="decision('industry')">Investir</button>
+    </div>
+
+    <div class="decision">
+        <strong>Automação</strong>
+        <span>+ produtividade / - empregos repetitivos</span>
+        <button onclick="decision('automation')">Acelerar</button>
+    </div>
+
+    <div class="decision">
+        <strong>Educação</strong>
+        <span>+ qualificação / + produtividade futura</span>
+        <button onclick="decision('education')">Expandir</button>
+    </div>
+
+    <div class="decision">
+        <strong>Habitação</strong>
+        <span>+ construção / - pressão habitacional</span>
+        <button onclick="decision('housing')">Construir</button>
+    </div>
+
+    <div class="decision">
+        <strong>Imigração</strong>
+        <span>+ população ativa / pressão habitacional</span>
+        <button onclick="decision('immigration')">Aumentar</button>
+    </div>
+
+    <div class="decision">
+        <strong>Famílias</strong>
+        <span>incentivos à natalidade / custo público</span>
+        <button onclick="decision('births')">Apoiar</button>
+    </div>
+
+    <div class="decision">
+        <strong>Energia</strong>
+        <span>+ produtividade / menor dependência externa</span>
+        <button onclick="decision('energy')">Investir</button>
+    </div>
+
+    <div class="decision">
+        <strong>Defesa</strong>
+        <span>+ segurança / custo económico</span>
+        <button onclick="decision('defense')">Reforçar</button>
+    </div>
+
+</div>
+</div>
+
+
+<!-- =====================================================
+     TEORIA DOS JOGOS
+====================================================== -->
+
+<div class="panel">
+
+<h2>
+    Ambiente estratégico
+    <span class="badge">teoria dos jogos</span>
+</h2>
+
+<div class="strategy-grid">
+
+    <div class="strategy">
+        <strong>Cooperação</strong>
+        <span id="strategyCooperation">—</span>
+    </div>
+
+    <div class="strategy">
+        <strong>Competição económica</strong>
+        <span id="strategyCompetition">—</span>
+    </div>
+
+    <div class="strategy">
+        <strong>Corrida tecnológica</strong>
+        <span id="strategyTechnology">—</span>
+    </div>
+
+    <div class="strategy">
+        <strong>Segurança / defesa</strong>
+        <span id="strategyDefense">—</span>
+    </div>
+
+    <div class="strategy">
+        <strong>Dependência externa</strong>
+        <span id="strategyDependency">—</span>
+    </div>
+
+    <div class="strategy">
+        <strong>Poder estratégico</strong>
+        <span id="strategyPower">—</span>
+    </div>
+
+</div>
+
+</div>
+
+
+<!-- =====================================================
+     ESTRUTURA
+====================================================== -->
+
+<div class="panel">
+
+<h2>Estrutura da sociedade</h2>
+
+<pre id="structureText"></pre>
+
+</div>
+
+</main>
+
+
+<aside>
+
+<div class="panel">
+
+<h2>Eventos</h2>
+
+<div class="events" id="events"></div>
+
+</div>
+
+
+<div class="panel">
+
+<h2>Estado do sistema</h2>
+
+<pre id="systemState"></pre>
+
+</div>
+
+</aside>
+
+</div>
+
+</div>
+
+
+<script>
+
+/*
+============================================================
+ SIMULADOR SOCIAL + TEORIA DOS JOGOS
+============================================================
+
+ PRINCÍPIO:
+
+ País não é uma entidade isolada.
+
+ Cada país possui:
+
+ população
+ economia
+ tecnologia
+ recursos
+ energia
+ indústria
+ estabilidade
+ capacidade militar
+ dependências
+ alianças
+ interesses
+
+ E cada decisão altera os incentivos dos restantes jogadores.
+
+ O motor não tenta "adivinhar" o futuro.
+
+ Ele calcula trajetórias condicionais:
+
+ estado atual
+       ↓
+ decisões
+       ↓
+ reação dos outros atores
+       ↓
+ novo equilíbrio
+       ↓
+ próximo ano
+       ↓
+ novo estado
+
+ Quanto maior o horizonte, maior a incerteza.
+
+============================================================
+*/
+
+
+let state=null;
+let history=[];
+let events=[];
+let currentChart="population";
+
+
+/* ========================================================
+   FUNÇÕES BÁSICAS
+======================================================== */
+
+function num(id){
+    return Number(document.getElementById(id).value);
+}
+
+function clamp(v,min,max){
+    return Math.max(min,Math.min(max,v));
+}
+
+function random(min,max){
+    return Math.random()*(max-min)+min;
+}
+
+
+/* ========================================================
+   CRIAÇÃO DO ESTADO
+======================================================== */
+
+function createInitialState(){
+
+    return {
+
+        country:document.getElementById("countryName").value,
+
+        year:num("startYear"),
+
+        population:num("population"),
+
+        gdp:num("gdp"),
+
+        fertility:num("fertility"),
+
+        lifeExpectancy:num("lifeExpectancy"),
+
+        migration:num("migration"),
+
+        inflation:num("inflation"),
+
+        debtRatio:num("debtRatio"),
+
+        industry:num("industry"),
+
+        tourism:num("tourism"),
+
+        automation:num("automation"),
+
+        tax:num("tax"),
+
+        education:num("education"),
+
+        health:num("health"),
+
+        housing:65,
+
+        productivity:100,
+
+        unemployment:6,
+
+        employment:65,
+
+        inequality:30,
+
+        stability:70,
+
+        infrastructure:70,
+
+        energySecurity:60,
+
+        educationQuality:65,
+
+        healthQuality:70,
+
+        birthSupport:0,
+
+        defense:2,
+
+        externalBalance:0,
+
+        resourceDependence:35,
+
+        socialPressure:20,
+
+        accumulatedInvestment:0,
+
+
+        /*
+        ================================================
+        VARIÁVEIS DE TEORIA DOS JOGOS
+        ================================================
+        */
+
+        cooperation:60,
+
+        competition:40,
+
+        technologyRace:30,
+
+        strategicPower:50,
+
+        diplomaticPower:50,
+
+        economicPower:50,
+
+        militaryPower:40,
+
+        resourcePower:40,
+
+        dependency:35,
+
+        allianceStrength:50,
+
+        foreignInfluence:30,
+
+        tradeExposure:60,
+
+        sanctionRisk:15,
+
+        strategicAutonomy:50,
+
+        globalDemand:70,
+
+        worldTension:20,
+
+        gameScore:50
+
+    };
+
+}
+
+
+/* ========================================================
+   HISTÓRICO
+======================================================== */
+
+function snapshot(){
+
+    history.push({
+
+        year:state.year,
+
+        population:state.population,
+
+        gdp:state.gdp,
+
+        fertility:state.fertility,
+
+        debt:state.debtRatio,
+
+        automation:state.automation,
+
+        unemployment:state.unemployment,
+
+        inequality:state.inequality,
+
+        stability:state.stability,
+
+        industry:state.industry,
+
+        tourism:state.tourism,
+
+        housing:state.housing,
+
+        productivity:state.productivity,
+
+        education:state.educationQuality,
+
+        health:state.healthQuality,
+
+        strategicPower:state.strategicPower,
+
+        cooperation:state.cooperation,
+
+        competition:state.competition,
+
+        dependency:state.dependency,
+
+        technologyRace:state.technologyRace,
+
+        worldTension:state.worldTension,
+
+        gameScore:state.gameScore
+
+    });
+
+}
+
+
+/* ========================================================
+   FORMATAÇÃO
+======================================================== */
+
+function formatPopulation(v){
+
+    if(v>=1000000000)
+        return (v/1000000000).toFixed(2)+" B";
+
+    if(v>=1000000)
+        return (v/1000000).toFixed(2)+" M";
+
+    if(v>=1000)
+        return (v/1000).toFixed(1)+" mil";
+
+    return Math.round(v).toString();
+}
+
+
+function formatMoney(v){
+
+    if(Math.abs(v)>=1000000000000)
+        return "€"+(v/1000000000000).toFixed(2)+" T";
+
+    if(Math.abs(v)>=1000000000)
+        return "€"+(v/1000000000).toFixed(1)+" B";
+
+    if(Math.abs(v)>=1000000)
+        return "€"+(v/1000000).toFixed(1)+" M";
+
+    return "€"+Math.round(v).toLocaleString("pt-PT");
+}
+
+
+/* ========================================================
+   EVENTOS
+======================================================== */
+
+function logEvent(title,text,type="neutral"){
+
+    events.unshift({
+        year:state.year,
+        title:title,
+        text:text,
+        type:type
+    });
+
+    if(events.length>150)
+        events.pop();
+}
+
+
+/* ========================================================
+   DEMOGRAFIA
+======================================================== */
+
+function birthRate(){
+
+    return 0.007+(state.fertility*0.0035);
+}
+
+
+function mortalityRate(){
+
+    let base=0.008;
+
+    if(state.lifeExpectancy>85)
+        base-=0.001;
+
+    if(state.healthQuality>80)
+        base-=0.001;
+
+    if(state.lifeExpectancy<75)
+        base+=0.002;
+
+    return clamp(base,0.004,0.018);
+}
+
+
+function calculateWorkingAge(){
+
+    let active=66;
+
+    if(state.lifeExpectancy>85)
+        active-=4;
+
+    if(state.fertility<1.4)
+        active-=2;
+
+    if(state.fertility>2)
+        active+=1;
+
+    return clamp(active,50,72);
+}
+
+
+/* ========================================================
+   TEORIA DOS JOGOS
+======================================================== */
+
+/*
+    Aqui está uma das partes mais importantes do novo motor.
+
+    Não existe um único "inimigo".
+
+    O país enfrenta diferentes tipos de jogadores:
+
+    1. parceiros comerciais
+    2. concorrentes industriais
+    3. fornecedores de energia
+    4. potências tecnológicas
+    5. blocos militares
+    6. investidores
+    7. mercados externos
+
+    O motor calcula incentivos agregados.
+
+*/
+
+
+function calculateStrategicEnvironment(){
+
+    /*
+    ------------------------------------------------------
+    PODER ECONÓMICO
+    ------------------------------------------------------
+    */
+
+    state.economicPower =
+        clamp(
+
+            25+
+
+            Math.log10(
+                Math.max(
+                    1,
+                    state.gdp/state.population
+                )
+            )*8+
+
+            state.industry*0.8+
+
+            state.productivity*0.08,
+
+            0,
+            100
+        );
+
+
+    /*
+    ------------------------------------------------------
+    PODER TECNOLÓGICO
+    ------------------------------------------------------
+    */
+
+    state.technologyRace =
+        clamp(
+
+            state.technologyRace+
+
+            state.automation*0.03+
+
+            state.educationQuality*0.025+
+
+            state.industry*0.015-
+
+            state.dependency*0.01,
+
+            0,
+            100
+        );
+
+
+    /*
+    ------------------------------------------------------
+    PODER DE RECURSOS
+    ------------------------------------------------------
+    */
+
+    state.resourcePower =
+        clamp(
+
+            100-
+            state.resourceDependence+
+
+            state.energySecurity*0.25,
+
+            0,
+            100
+        );
+
+
+    /*
+    ------------------------------------------------------
+    PODER MILITAR
+    ------------------------------------------------------
+    */
+
+    state.militaryPower =
+        clamp(
+
+            state.defense*8+
+
+            state.gdp/100000000000*5+
+
+            state.infrastructure*0.15+
+
+            state.technologyRace*0.15,
+
+            0,
+            100
+        );
+
+
+    /*
+    ------------------------------------------------------
+    PODER DIPLOMÁTICO
+    ------------------------------------------------------
+    */
+
+    state.diplomaticPower =
+        clamp(
+
+            state.cooperation*0.4+
+
+            state.stability*0.25+
+
+            state.economicPower*0.2+
+
+            state.allianceStrength*0.15,
+
+            0,
+            100
+        );
+
+
+    /*
+    ------------------------------------------------------
+    AUTONOMIA ESTRATÉGICA
+    ------------------------------------------------------
+    */
+
+    state.strategicAutonomy = clamp(
+
+        100-
+
+        state.dependency*0.45+
+
+        state.resourcePower*0.25+
+
+        state.economicPower*0.15+
+
+        state.technologyRace*0.15,
+
+        0,
+        100
+    );
+
+
+    /*
+    ------------------------------------------------------
+    COMPETIÇÃO
+    ------------------------------------------------------
+
+    Quanto maior a competição tecnológica/económica,
+    maior a pressão para investir.
+
+    ------------------------------------------------------
+    */
+
+    state.competition = clamp(
+
+        30+
+
+        state.technologyRace*0.35+
+
+        state.worldTension*0.35+
+
+        state.tradeExposure*0.10-
+
+        state.cooperation*0.20,
+
+        0,
+        100
+    );
+
+
+    /*
+    ------------------------------------------------------
+    COOPERAÇÃO
+    ------------------------------------------------------
+
+    Cooperação aumenta quando:
+
+    estabilidade alta
+    dependência mútua
+    comércio
+    confiança
+
+    ------------------------------------------------------
+    */
+
+    state.cooperation = clamp(
+
+        50+
+
+        state.stability*0.15+
+
+        state.allianceStrength*0.25+
+
+        state.tradeExposure*0.15-
+
+        state.worldTension*0.30,
+
+        0,
+        100
+    );
+
+
+    /*
+    ------------------------------------------------------
+    TENSÃO GLOBAL
+    ------------------------------------------------------
+
+    ------------------------------------------------------
+    */
+
+    state.worldTension = clamp(
+
+        state.worldTension+
+
+        state.competition*0.01-
+
+        state.cooperation*0.008+
+
+        (state.dependency>70 ? 0.2 : 0)-
+
+        (state.strategicAutonomy>70 ? 0.1 : 0),
+
+        0,
+        100
+    );
+
+
+    /*
+    ------------------------------------------------------
+    RISCO DE SANÇÕES
+    ------------------------------------------------------
+    */
+
+    state.sanctionRisk = clamp(
+
+        state.foreignInfluence*0.25+
+
+        state.competition*0.15+
+
+        state.worldTension*0.20-
+
+        state.diplomaticPower*0.20,
+
+        0,
+        100
+    );
+
+
+    /*
+    ------------------------------------------------------
+    PONTUAÇÃO ESTRATÉGICA
+    ------------------------------------------------------
+    */
+
+    state.strategicPower = clamp(
+
+        state.economicPower*0.25+
+
+        state.technologyRace*0.20+
+
+        state.militaryPower*0.15+
+
+        state.resourcePower*0.15+
+
+        state.diplomaticPower*0.15+
+
+        state.strategicAutonomy*0.10,
+
+        0,
+        100
+    );
+
+
+    /*
+    ------------------------------------------------------
+    GAME SCORE
+    ------------------------------------------------------
+
+    Não é "bom/mau".
+
+    É apenas capacidade de obter resultados
+    estratégicos dentro do ambiente simulado.
+
+    ------------------------------------------------------
+    */
+
+    state.gameScore = clamp(
+
+        state.strategicPower*0.35+
+
+        state.stability*0.20+
+
+        state.economicPower*0.15+
+
+        state.technologyRace*0.10+
+
+        state.resourcePower*0.10+
+
+        state.diplomaticPower*0.10,
+
+        0,
+        100
+    );
+}
+
+
+/* ========================================================
+   RESPOSTA DOS OUTROS JOGADORES
+======================================================== */
+
+function strategicResponse(){
+
+    /*
+    ======================================================
+    DILEMA DO PRISIONEIRO / JOGO REPETIDO
+    ======================================================
+
+    Se a cooperação for elevada:
+
+        comércio cresce
+        risco diminui
+        investimento aumenta
+
+    Se a competição aumenta:
+
+        tecnologia acelera
+        defesa aumenta
+        comércio fica mais vulnerável
+
+    ======================================================
+    */
+
+    if(state.cooperation>65){
+
+        state.tradeExposure+=0.15;
+
+        state.allianceStrength+=0.12;
+
+        state.foreignInfluence-=0.05;
+
+        state.sanctionRisk-=0.08;
+
+    }else{
+
+        state.tradeExposure-=0.10;
+
+        state.allianceStrength-=0.08;
+
+        state.technologyRace+=0.12;
+
+        state.defense+=0.015;
+
+    }
+
+
+    /*
+    ======================================================
+    CORRIDA TECNOLÓGICA
+    ======================================================
+    */
+
+    if(state.technologyRace>65){
+
+        state.automation+=0.08;
+
+        state.productivity*=1.0008;
+
+        state.competition+=0.05;
+
+    }
+
+
+    /*
+    ======================================================
+    CORRIDA DE SEGURANÇA
+    ======================================================
+    */
+
+    if(state.worldTension>60){
+
+        state.defense+=0.04;
+
+        state.debtRatio+=0.025;
+
+        state.stability-=0.03;
+
+    }
+
+
+    /*
+    ======================================================
+    DEPENDÊNCIA
+    ======================================================
+
+    Quanto mais dependente um país é de poucos
+    fornecedores/mercados, maior o risco estratégico.
+
+    ======================================================
+    */
+
+    if(state.dependency>65){
+
+        state.gdp*=0.9995;
+
+        state.inflation+=0.03;
+
+        state.strategicAutonomy-=0.08;
+
+    }
+
+
+    /*
+    ======================================================
+    SANÇÕES / GUERRA COMERCIAL
+    ======================================================
+    */
+
+    if(state.sanctionRisk>70){
+
+        state.gdp*=0.997;
+
+        state.tradeExposure-=0.25;
+
+        state.inflation+=0.05;
+
+        state.socialPressure+=0.10;
+
+        logEvent(
+            "Pressão externa",
+            "O ambiente estratégico aumentou os custos de comércio e financiamento.",
+            "bad"
+        );
+    }
+
+
+    /*
+    ======================================================
+    ALIANÇAS
+    ======================================================
+    */
+
+    if(state.allianceStrength>75){
+
+        state.militaryPower+=0.03;
+
+        state.diplomaticPower+=0.03;
+
+        state.sanctionRisk-=0.04;
+    }
+
+
+    state.defense=
+        clamp(state.defense,0,15);
+
+    state.tradeExposure=
+        clamp(state.tradeExposure,0,100);
+
+    state.allianceStrength=
+        clamp(state.allianceStrength,0,100);
+
+    state.dependency=
+        clamp(state.dependency,0,100);
+
+    state.sanctionRisk=
+        clamp(state.sanctionRisk,0,100);
+}
+
+
+/* ========================================================
+   SIMULAÇÃO DE UM ANO
+======================================================== */
+
+function simulateYear(){
+
+    const oldPopulation=state.population;
+    const oldGDP=state.gdp;
+
+
+    /* ====================================================
+       1. DEMOGRAFIA
+    ==================================================== */
+
+    let births=
+        state.population*
+        birthRate();
+
+    births*=
+        (1+state.birthSupport*0.02);
+
+    let deaths=
+        state.population*
+        mortalityRate();
+
+    let migration=state.migration;
+
+    if(state.unemployment>12)
+        migration*=0.75;
+
+    state.population+=
+        births-deaths+ migration;
+
+
+    /*
+    Fertilidade
+    */
+
+    let fertilityPressure=0;
+
+    if(state.housing<50)
+        fertilityPressure-=0.015;
+
+    if(state.unemployment>10)
+        fertilityPressure-=0.02;
+
+    if(state.gdp/state.population<20000)
+        fertilityPressure-=0.015;
+
+    if(state.housing>80)
+        fertilityPressure+=0.01;
+
+    if(state.educationQuality>80)
+        fertilityPressure-=0.005;
+
+    state.fertility+=fertilityPressure;
+
+    state.fertility+=
+        (2.1-state.fertility)*0.01;
+
+    state.fertility=
+        clamp(state.fertility,0.7,3.2);
+
+
+    /* ====================================================
+       2. FORÇA DE TRABALHO
+    ==================================================== */
+
+    const activePercent=
+        calculateWorkingAge();
+
+    const activePopulation=
+        state.population*
+        activePercent/100;
+
+
+    /* ====================================================
+       3. AUTOMAÇÃO
+    ==================================================== */
+
+    state.automation+=0.15;
+
+    state.automation+=
+        (state.industry/100)*
+        (state.educationQuality/100)*
+        0.08;
+
+    /*
+    Corrida tecnológica internacional
+    */
+
+    state.automation+=
+        state.technologyRace*0.002;
+
+    state.automation=
+        clamp(state.automation,0,100);
+
+
+    /* ====================================================
+       4. PRODUTIVIDADE
+    ==================================================== */
+
+    let productivityGrowth=0.015;
+
+    productivityGrowth+=
+        state.educationQuality/1000;
+
+    productivityGrowth+=
+        state.automation/1000;
+
+    productivityGrowth+=
+        state.industry/1000;
+
+    productivityGrowth+=
+        state.infrastructure/1500;
+
+    /*
+    Efeito da competição tecnológica
+    */
+
+    productivityGrowth+=
+        state.technologyRace/10000;
+
+    if(state.energySecurity<40)
+        productivityGrowth-=0.01;
+
+    if(state.socialPressure>70)
+        productivityGrowth-=0.008;
+
+    state.productivity*=
+        1+productivityGrowth;
+
+
+    /* ====================================================
+       5. EMPREGO
+    ==================================================== */
+
+    let technologicalDisplacement=
+        state.automation*0.025;
+
+    let jobCreation=
+        state.industry*0.015+
+        state.infrastructure*0.005+
+        state.educationQuality*0.004;
+
+    let unemploymentChange=
+        technologicalDisplacement-
+        jobCreation-
+        (state.industry>25?0.5:0);
+
+    state.unemployment+=
+        unemploymentChange*0.1;
+
+    if(migration>0)
+        state.unemployment-=0.01;
+
+    state.unemployment=
+        clamp(state.unemployment,2,30);
+
+
+    /* ====================================================
+       6. PIB
+    ==================================================== */
+
+    let realGrowth=
+        productivityGrowth;
+
+    realGrowth+=
+        (activePercent-60)/1000;
+
+    realGrowth-=
+        Math.max(
+            0,
+            state.unemployment-5
+        )/1000;
+
+    realGrowth+=
+        state.industry/3000;
+
+    realGrowth+=
+        state.tourism/10000;
+
+    /*
+    Comércio internacional
+    */
+
+    realGrowth+=
+        state.tradeExposure/20000;
+
+    /*
+    Dependência excessiva
+    */
+
+    realGrowth-=
+        Math.max(
+            0,
+            state.dependency-60
+        )/20000;
+
+    if(state.inequality>45)
+        realGrowth-=0.003;
+
+    if(state.stability<40)
+        realGrowth-=0.008;
+
+    /*
+    Ambiente estratégico
+    */
+
+    realGrowth+=
+        (state.strategicPower-50)/20000;
+
+    state.gdp*=
+        1+realGrowth;
+
+
+    /* ====================================================
+       7. INFLAÇÃO
+    ==================================================== */
+
+    state.inflation=2;
+
+    if(state.socialPressure>60)
+        state.inflation+=1;
+
+    if(state.energySecurity<40)
+        state.inflation+=1.5;
+
+    if(state.unemployment<4)
+        state.inflation+=1;
+
+    state.inflation+=
+        state.sanctionRisk/100;
+
+    state.inflation=
+        clamp(state.inflation,0,15);
+
+
+    /* ====================================================
+       8. HABITAÇÃO
+    ==================================================== */
+
+    const populationPressure=
+        ((state.population-oldPopulation)/
+        oldPopulation)*100;
+
+    state.housing-=
+        populationPressure*4;
+
+    if(state.gdp/state.population>30000)
+        state.housing+=0.3;
+
+    state.housing=
+        clamp(state.housing,0,100);
+
+
+    /* ====================================================
+       9. EDUCAÇÃO
+    ==================================================== */
+
+    state.educationQuality+=
+        (state.education-4)*0.08;
+
+    state.educationQuality=
+        clamp(
+            state.educationQuality,
+            20,
+            100
+        );
+
+
+    /* ====================================================
+       10. SAÚDE
+    ==================================================== */
+
+    state.healthQuality+=
+        (state.health-5)*0.06;
+
+    state.healthQuality=
+        clamp(
+            state.healthQuality,
+            30,
+            100
+        );
+
+    state.lifeExpectancy+=
+        (state.healthQuality-65)*0.002;
+
+    state.lifeExpectancy=
+        clamp(
+            state.lifeExpectancy,
+            65,
+            95
+        );
+
+
+    /* ====================================================
+       11. INDÚSTRIA
+    ==================================================== */
+
+    state.industry+=0.03;
+
+    if(state.tourism>35)
+        state.industry-=0.02;
+
+    /*
+    Competição externa obriga adaptação.
+    */
+
+    if(state.competition>65)
+        state.industry+=0.025;
+
+    state.industry=
+        clamp(state.industry,5,50);
+
+
+    /* ====================================================
+       12. TURISMO
+    ==================================================== */
+
+    state.tourism+=0.02;
+
+    if(state.worldTension>70)
+        state.tourism-=0.05;
+
+    state.tourism=
+        clamp(state.tourism,5,50);
+
+
+    /* ====================================================
+       13. DÍVIDA
+    ==================================================== */
+
+    let taxRevenue=
+        state.gdp*(state.tax/100);
+
+    let spending=
+        state.gdp*
+        (
+            state.education/100+
+            state.health/100+
+            state.defense/100
+        );
+
+    let fiscalBalance=
+        taxRevenue-spending;
+
+    if(fiscalBalance<0){
+
+        const deficit=
+            Math.abs(fiscalBalance);
+
+        state.debtRatio+=
+            (deficit/state.gdp)*100;
+
+    }else{
+
+        state.debtRatio-=0.5;
+    }
+
+    state.debtRatio-=
+        realGrowth*20;
+
+    state.debtRatio=
+        clamp(state.debtRatio,0,300);
+
+
+    /* ====================================================
+       14. DESIGUALDADE
+    ==================================================== */
+
+    if(state.automation>50)
+        state.inequality+=0.05;
+
+    if(state.educationQuality>75)
+        state.inequality-=0.08;
+
+    if(state.unemployment>10)
+        state.inequality+=0.12;
+
+    if(state.gdp/state.population>40000)
+        state.inequality-=0.03;
+
+    state.inequality=
+        clamp(state.inequality,10,70);
+
+
+    /* ====================================================
+       15. ENERGIA
+    ==================================================== */
+
+    state.energySecurity+=
+        (state.industry<20?-0.01:0.02);
+
+    /*
+    Dependência externa aumenta vulnerabilidade energética.
+    */
+
+    state.energySecurity-=
+        state.dependency*0.001;
+
+    state.energySecurity=
+        clamp(state.energySecurity,10,100);
+
+
+    /* ====================================================
+       16. PRESSÃO SOCIAL
+    ==================================================== */
+
+    state.socialPressure=20;
+
+    if(state.housing<50)
+        state.socialPressure+=15;
+
+    if(state.unemployment>10)
+        state.socialPressure+=15;
+
+    if(state.inequality>40)
+        state.socialPressure+=
+            (state.inequality-40)*0.8;
+
+    if(state.debtRatio>150)
+        state.socialPressure+=10;
+
+    state.socialPressure+=
+        state.sanctionRisk*0.05;
+
+    state.socialPressure=
+        clamp(state.socialPressure,0,100);
+
+
+    /* ====================================================
+       17. ESTABILIDADE
+    ==================================================== */
+
+    state.stability=80;
+
+    state.stability-=
+        state.socialPressure*0.45;
+
+    state.stability-=
+        Math.max(
+            0,
+            state.inflation-4
+        )*2;
+
+    state.stability+=
+        state.educationQuality*0.1;
+
+    state.stability-=
+        state.worldTension*0.05;
+
+    state.stability=
+        clamp(state.stability,0,100);
+
+
+    /* ====================================================
+       18. AMBIENTE ESTRATÉGICO
+    ==================================================== */
+
+    calculateStrategicEnvironment();
+
+    strategicResponse();
+
+
+    /* ====================================================
+       19. EVENTOS
+    ==================================================== */
+
+    randomEvent();
+
+
+    /* ====================================================
+       20. ANO
+    ==================================================== */
+
+    state.year++;
+
+    snapshot();
+
+    updateUI();
+}
+
+
+/* ========================================================
+   EVENTOS ALEATÓRIOS
+======================================================== */
+
+function randomEvent(){
+
+    const r=Math.random();
+
+    if(r>0.94){
+
+        const list=[
+
+            {
+                title:"Crise energética",
+                text:"O custo energético aumenta e reduz a capacidade produtiva.",
+                effect:()=>{
+                    state.gdp*=0.985;
+                    state.inflation+=2;
+                    state.energySecurity-=8;
+                }
+            },
+
+            {
+                title:"Crise económica global",
+                text:"A procura externa diminui temporariamente.",
+                effect:()=>{
+                    state.gdp*=0.97;
+                    state.unemployment+=2;
+                    state.tourism-=2;
+                }
+            },
+
+            {
+                title:"Salto tecnológico",
+                text:"Uma nova vaga tecnológica acelera produtividade e automação.",
+                effect:()=>{
+                    state.productivity*=1.025;
+                    state.automation+=3;
+                    state.technologyRace+=5;
+                }
+            },
+
+            {
+                title:"Crise habitacional",
+                text:"A procura habitacional ultrapassa a capacidade de construção.",
+                effect:()=>{
+                    state.housing-=8;
+                    state.socialPressure+=8;
+                }
+            },
+
+            {
+                title:"Choque sanitário",
+                text:"A atividade económica e indicadores sanitários deterioram-se.",
+                effect:()=>{
+                    state.gdp*=0.96;
+                    state.lifeExpectancy-=0.3;
+                    state.healthQuality-=3;
+                }
+            },
+
+            {
+                title:"Descoberta de recursos",
+                text:"Aumenta a segurança energética e a capacidade exportadora.",
+                effect:()=>{
+                    state.energySecurity+=10;
+                    state.resourceDependence-=8;
+                    state.gdp*=1.01;
+                }
+            },
+
+            {
+                title:"Guerra comercial",
+                text:"A competição entre blocos reduz o comércio internacional.",
+                effect:()=>{
+                    state.tradeExposure-=10;
+                    state.competition+=8;
+                    state.gdp*=0.985;
+                }
+            },
+
+            {
+                title:"Acordo estratégico",
+                text:"A cooperação internacional reduz temporariamente o risco externo.",
+                effect:()=>{
+                    state.cooperation+=10;
+                    state.allianceStrength+=8;
+                    state.sanctionRisk-=8;
+                }
+            }
+
+        ];
+
+        const e=
+            list[
+                Math.floor(
+                    Math.random()*list.length
+                )
+            ];
+
+        e.effect();
+
+        logEvent(
+            e.title,
+            e.text,
+            "neutral"
+        );
+    }
+}
+
+
+/* ========================================================
+   DECISÕES
+======================================================== */
+
+function decision(type){
+
+    if(!state)
+        return;
+
+    switch(type){
+
+        case "industry":
+
+            state.industry+=2;
+            state.infrastructure+=1;
+            state.debtRatio+=2;
+            state.gdp*=1.005;
+            state.strategicAutonomy+=1;
+
+            logEvent(
+                "Programa industrial",
+                "Aumentada a capacidade produtiva e industrial.",
+                "good"
+            );
+
+        break;
+
+
+        case "automation":
+
+            state.automation+=4;
+            state.productivity*=1.01;
+            state.unemployment+=0.5;
+            state.technologyRace+=3;
+
+            logEvent(
+                "Aceleração da automação",
+                "A produtividade aumentou, acompanhada por deslocação de parte do trabalho.",
+                "neutral"
+            );
+
+        break;
+
+
+        case "education":
+
+            state.education+=0.5;
+            state.educationQuality+=4;
+            state.debtRatio+=1;
+            state.technologyRace+=1;
+
+            logEvent(
+                "Expansão educacional",
+                "Aumentado o investimento em capital humano.",
+                "good"
+            );
+
+        break;
+
+
+        case "housing":
+
+            state.housing+=12;
+            state.infrastructure+=2;
+            state.debtRatio+=3;
+
+            logEvent(
+                "Programa habitacional",
+                "Aumentada a capacidade habitacional.",
+                "good"
+            );
+
+        break;
+
+
+        case "immigration":
+
+            state.migration+=25000;
+            state.population+=25000;
+            state.housing-=3;
+
+            logEvent(
+                "Aumento da imigração",
+                "A força de trabalho e a população aumentaram.",
+                "neutral"
+            );
+
+        break;
+
+
+        case "births":
+
+            state.birthSupport+=2;
+            state.debtRatio+=1;
+
+            logEvent(
+                "Política familiar",
+                "O apoio às famílias aumentou. O efeito demográfico será gradual.",
+                "neutral"
+            );
+
+        break;
+
+
+        case "energy":
+
+            state.energySecurity+=8;
+            state.infrastructure+=2;
+            state.debtRatio+=2;
+            state.resourceDependence-=3;
+
+            logEvent(
+                "Investimento energético",
+                "Aumentada a segurança energética e reduzida parte da dependência.",
+                "good"
+            );
+
+        break;
+
+
+        case "defense":
+
+            state.defense+=0.5;
+            state.debtRatio+=1;
+            state.stability+=2;
+            state.militaryPower+=3;
+
+            logEvent(
+                "Reforço da defesa",
+                "Aumentada a capacidade de defesa com custo económico.",
+                "neutral"
+            );
+
+        break;
+    }
+
+    state.stability=
+        clamp(state.stability,0,100);
+
+    updateUI();
+}
+
+
+/* ========================================================
+   SIMULAÇÃO
+======================================================== */
+
+function runSimulation(){
+
+    state=createInitialState();
+
+    history=[];
+    events=[];
+
+    snapshot();
+
+    let years=
+        Number(
+            document.getElementById("horizon").value
+        );
+
+    years=Math.floor(years);
+
+    if(!Number.isFinite(years) || years<1)
+        years=1;
+
+    years=
+        Math.min(years,2000);
+
+    for(let i=0;i<years;i++)
+        simulateYear();
+
+    logEvent(
+        "Simulação concluída",
+        `Foram simulados ${years} anos.`,
+        "good"
+    );
+
+    updateUI();
+}
+
+
+function advanceOneYear(){
+
+    if(!state)
+        state=createInitialState();
+
+    simulateYear();
+}
+
+
+function resetSimulation(){
+
+    state=createInitialState();
+
+    history=[];
+    events=[];
+
+    snapshot();
+
+    updateUI();
+}
+
+
+/* ========================================================
+   GRÁFICOS
+======================================================== */
+
+function showChart(type,button){
+
+    currentChart=type;
+
+    document
+        .querySelectorAll(".chart-tabs button")
+        .forEach(
+            b=>b.classList.remove("active")
+        );
+
+    button.classList.add("active");
+
+    drawChart();
+}
+
+
+function drawChart(){
+
+    const canvas=
+        document.getElementById("chart");
+
+    const rect=
+        canvas.getBoundingClientRect();
+
+    const dpr=
+        window.devicePixelRatio||1;
+
+    canvas.width=
+        rect.width*dpr;
+
+    canvas.height=
+        rect.height*dpr;
+
+    const ctx=
+        canvas.getContext("2d");
+
+    ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+    );
+
+    const W=rect.width;
+    const H=rect.height;
+
+    ctx.clearRect(0,0,W,H);
+
+    if(history.length<2)
+        return;
+
+    let series=[];
+
+
+    if(currentChart==="population"){
+
+        series=[{
+            name:"População (M)",
+            data:history.map(
+                x=>x.population/1000000
+            )
+        }];
+
+    }
+
+    else if(currentChart==="economy"){
+
+        series=[
+            {
+                name:"PIB (€ B)",
+                data:history.map(
+                    x=>x.gdp/1000000000
+                )
+            },
+            {
+                name:"Dívida / PIB",
+                data:history.map(
+                    x=>x.debt
+                )
+            }
+        ];
+
+    }
+
+    else if(currentChart==="demography"){
+
+        series=[
+            {
+                name:"Fertilidade",
+                data:history.map(
+                    x=>x.fertility
+                )
+            },
+            {
+                name:"População (M)",
+                data:history.map(
+                    x=>x.population/1000000
+                )
+            }
+        ];
+
+    }
+
+    else if(currentChart==="society"){
+
+        series=[
+            {
+                name:"Estabilidade",
+                data:history.map(
+                    x=>x.stability
+                )
+            },
+            {
+                name:"Desigualdade",
+                data:history.map(
+                    x=>x.inequality
+                )
+            },
+            {
+                name:"Desemprego",
+                data:history.map(
+                    x=>x.unemployment
+                )
+            }
+        ];
+
+    }
+
+    else if(currentChart==="structure"){
+
+        series=[
+            {
+                name:"Indústria",
+                data:history.map(
+                    x=>x.industry
+                )
+            },
+            {
+                name:"Turismo",
+                data:history.map(
+                    x=>x.tourism
+                )
+            },
+            {
+                name:"Automação",
+                data:history.map(
+                    x=>x.automation
+                )
+            }
+        ];
+
+    }
+
+    else if(currentChart==="game"){
+
+        series=[
+            {
+                name:"Poder estratégico",
+                data:history.map(
+                    x=>x.strategicPower
+                )
+            },
+            {
+                name:"Cooperação",
+                data:history.map(
+                    x=>x.cooperation
+                )
+            },
+            {
+                name:"Competição",
+                data:history.map(
+                    x=>x.competition
+                )
+            },
+            {
+                name:"Dependência",
+                data:history.map(
+                    x=>x.dependency
+                )
+            }
+        ];
+    }
+
+
+    let all=[];
+
+    series.forEach(
+        s=>all=all.concat(s.data)
+    );
+
+    let min=Math.min(...all);
+    let max=Math.max(...all);
+
+    if(min===max){
+        min-=1;
+        max+=1;
+    }
+
+    const left=55;
+    const right=15;
+    const top=30;
+    const bottom=35;
+
+    const graphW=
+        W-left-right;
+
+    const graphH=
+        H-top-bottom;
+
+
+    /* GRID */
+
+    ctx.strokeStyle="#26313d";
+    ctx.lineWidth=1;
+
+    for(let i=0;i<5;i++){
+
+        const y=
+            top+
+            graphH*i/4;
+
+        ctx.beginPath();
+
+        ctx.moveTo(left,y);
+        ctx.lineTo(W-right,y);
+
+        ctx.stroke();
+
+        const value=
+            max-
+            (max-min)*i/4;
+
+        ctx.fillStyle="#657482";
+        ctx.font="10px Arial";
+
+        ctx.fillText(
+            value.toFixed(1),
+            5,
+            y+3
+        );
+    }
+
+
+    const startYear=
+        history[0].year;
+
+    const endYear=
+        history[history.length-1].year;
+
+    ctx.fillStyle="#657482";
+
+    ctx.fillText(
+        startYear,
+        left,
+        H-10
+    );
+
+    ctx.fillText(
+        endYear,
+        W-50,
+        H-10
+    );
+
+
+    /* LINHAS */
+
+    series.forEach(
+        (s,index)=>{
+
+            ctx.beginPath();
+
+            s.data.forEach(
+                (v,i)=>{
+
+                    const x=
+                        left+
+                        graphW*
+                        i/
+                        (s.data.length-1);
+
+                    const y=
+                        top+
+                        (max-v)/
+                        (max-min)*
+                        graphH;
+
+                    if(i===0)
+                        ctx.moveTo(x,y);
+                    else
+                        ctx.lineTo(x,y);
+                }
+            );
+
+            const colors=[
+                "#6f9fbd",
+                "#9caa70",
+                "#b47e7e",
+                "#9a82b5"
+            ];
+
+            ctx.strokeStyle=
+                colors[index%colors.length];
+
+            ctx.lineWidth=2;
+
+            ctx.stroke();
+        }
+    );
+
+
+    /* LEGENDA */
+
+    series.forEach(
+        (s,i)=>{
+
+            const colors=[
+                "#6f9fbd",
+                "#9caa70",
+                "#b47e7e",
+                "#9a82b5"
+            ];
+
+            ctx.fillStyle=
+                colors[i%colors.length];
+
+            ctx.fillRect(
+                left+i*140,
+                8,
+                10,
+                10
+            );
+
+            ctx.fillStyle="#9ba8b5";
+            ctx.font="11px Arial";
+
+            ctx.fillText(
+                s.name,
+                left+15+i*140,
+                17
+            );
+        }
+    );
+}
+
+
+/* ========================================================
+   INTERFACE
+======================================================== */
+
+function updateUI(){
+
+    if(!state)
+        return;
+
+
+    document.getElementById("mYear")
+        .textContent=state.year;
+
+
+    document.getElementById("mPopulation")
+        .textContent=
+        formatPopulation(
+            state.population
+        );
+
+
+    document.getElementById("mGDP")
+        .textContent=
+        formatMoney(state.gdp);
+
+
+    const gdpPerCapita=
+        state.gdp/state.population;
+
+    document.getElementById("mGDPpc")
+        .textContent=
+        "€"+
+        Math.round(
+            gdpPerCapita
+        ).toLocaleString("pt-PT");
+
+
+    document.getElementById("mFertility")
+        .textContent=
+        state.fertility.toFixed(2);
+
+
+    document.getElementById("mDebt")
+        .textContent=
+        state.debtRatio.toFixed(0)+"%";
+
+
+    document.getElementById("mAutomation")
+        .textContent=
+        state.automation.toFixed(1)+"%";
+
+
+    document.getElementById("mStability")
+        .textContent=
+        state.stability.toFixed(0);
+
+
+    if(history.length>=2){
+
+        const prev=
+            history[history.length-2];
+
+        const popChange=
+            (
+                (state.population-
+                prev.population)/
+                prev.population
+            )*100;
+
+        const gdpChange=
+            (
+                (state.gdp-
+                prev.gdp)/
+                prev.gdp
+            )*100;
+
+        document.getElementById(
+            "mPopulationChange"
+        ).textContent=
+            (popChange>=0?"+":"")+
+            popChange.toFixed(2)+
+            "% / ano";
+
+        document.getElementById(
+            "mGDPChange"
+        ).textContent=
+            (gdpChange>=0?"+":"")+
+            gdpChange.toFixed(2)+
+            "% / ano";
+    }
+
+
+    /* ====================================================
+       ESTRUTURA
+    ==================================================== */
+
+    const active=
+        calculateWorkingAge();
+
+    const workingPopulation=
+        state.population*
+        active/100;
+
+    document.getElementById(
+        "structureText"
+    ).textContent=
+
+`SOCIEDADE — ${state.country}
+Ano: ${state.year}
+
+POPULAÇÃO
+  Total:              ${formatPopulation(state.population)}
+  Idade ativa:        ${active.toFixed(1)}%
+  População ativa:    ${formatPopulation(workingPopulation)}
+  Fertilidade:        ${state.fertility.toFixed(2)}
+  Esperança de vida:  ${state.lifeExpectancy.toFixed(1)} anos
+  Migração líquida:   ${Math.round(state.migration).toLocaleString("pt-PT")}/ano
+
+ECONOMIA
+  PIB:                ${formatMoney(state.gdp)}
+  PIB/habitante:      €${Math.round(gdpPerCapita).toLocaleString("pt-PT")}
+  Produtividade:      ${state.productivity.toFixed(1)}
+  Desemprego:         ${state.unemployment.toFixed(1)}%
+  Inflação:           ${state.inflation.toFixed(1)}%
+  Dívida/PIB:         ${state.debtRatio.toFixed(1)}%
+
+ESTRUTURA PRODUTIVA
+  Indústria:          ${state.industry.toFixed(1)}%
+  Turismo/serviços:   ${state.tourism.toFixed(1)}%
+  Automação:          ${state.automation.toFixed(1)}%
+  Segurança energética:
+                      ${state.energySecurity.toFixed(1)}
+
+SOCIEDADE
+  Educação:           ${state.educationQuality.toFixed(1)}
+  Saúde:              ${state.healthQuality.toFixed(1)}
+  Habitação:          ${state.housing.toFixed(1)}
+  Desigualdade:       ${state.inequality.toFixed(1)}
+  Pressão social:     ${state.socialPressure.toFixed(1)}
+  Estabilidade:       ${state.stability.toFixed(1)}
+
+TEORIA DOS JOGOS
+  Poder económico:    ${state.economicPower.toFixed(1)}
+  Poder tecnológico:  ${state.technologyRace.toFixed(1)}
+  Poder militar:      ${state.militaryPower.toFixed(1)}
+  Poder diplomático:  ${state.diplomaticPower.toFixed(1)}
+  Poder de recursos:  ${state.resourcePower.toFixed(1)}
+  Autonomia:          ${state.strategicAutonomy.toFixed(1)}
+  Dependência:        ${state.dependency.toFixed(1)}
+  Alianças:           ${state.allianceStrength.toFixed(1)}
+  Risco de sanções:   ${state.sanctionRisk.toFixed(1)}
+  Tensão global:      ${state.worldTension.toFixed(1)}
+  Poder estratégico:  ${state.strategicPower.toFixed(1)}
+  Índice estratégico: ${state.gameScore.toFixed(1)}`;
+
+
+    /* ====================================================
+       ESTRATÉGIA
+    ==================================================== */
+
+    document.getElementById(
+        "strategyCooperation"
+    ).textContent=
+        state.cooperation.toFixed(1);
+
+    document.getElementById(
+        "strategyCompetition"
+    ).textContent=
+        state.competition.toFixed(1);
+
+    document.getElementById(
+        "strategyTechnology"
+    ).textContent=
+        state.technologyRace.toFixed(1);
+
+    document.getElementById(
+        "strategyDefense"
+    ).textContent=
+        state.militaryPower.toFixed(1);
+
+    document.getElementById(
+        "strategyDependency"
+    ).textContent=
+        state.dependency.toFixed(1);
+
+    document.getElementById(
+        "strategyPower"
+    ).textContent=
+        state.strategicPower.toFixed(1);
+
+
+    /* ====================================================
+       EVENTOS
+    ==================================================== */
+
+    const eventsBox=
+        document.getElementById("events");
+
+    eventsBox.innerHTML="";
+
+    events.forEach(e=>{
+
+        const div=
+            document.createElement("div");
+
+        div.className="event";
+
+        div.innerHTML=
+        `<strong>${e.year} — ${e.title}</strong>
+         <small>${e.text}</small>`;
+
+        eventsBox.appendChild(div);
+    });
+
+
+    /* ====================================================
+       SYSTEM STATE
+    ==================================================== */
+
+    const initialPopulation=
+        history.length?
+        history[0].population:
+        state.population;
+
+    document.getElementById(
+        "systemState"
+    ).textContent=
+
+`ESTADO INTERNO
+
+Demografia:
+  Fertilidade       ${state.fertility.toFixed(2)}
+  Esperança vida    ${state.lifeExpectancy.toFixed(1)}
+  Crescimento pop.  ${(
+      (state.population/
+      initialPopulation-1)*100
+  ).toFixed(1)}%
+
+Economia:
+  PIB               ${formatMoney(state.gdp)}
+  Dívida/PIB        ${state.debtRatio.toFixed(1)}%
+  Inflação          ${state.inflation.toFixed(1)}%
+  Produtividade     ${state.productivity.toFixed(1)}
+
+Produção:
+  Indústria         ${state.industry.toFixed(1)}%
+  Turismo           ${state.tourism.toFixed(1)}%
+  Automação         ${state.automation.toFixed(1)}%
+
+Sociedade:
+  Habitação         ${state.housing.toFixed(1)}
+  Desigualdade      ${state.inequality.toFixed(1)}
+  Pressão           ${state.socialPressure.toFixed(1)}
+  Estabilidade      ${state.stability.toFixed(1)}
+
+CAPACIDADE ESTRATÉGICA:
+  Poder económico   ${state.economicPower.toFixed(1)}
+  Tecnologia        ${state.technologyRace.toFixed(1)}
+  Recursos          ${state.resourcePower.toFixed(1)}
+  Militar           ${state.militaryPower.toFixed(1)}
+  Diplomacia        ${state.diplomaticPower.toFixed(1)}
+
+RELAÇÕES:
+  Cooperação        ${state.cooperation.toFixed(1)}
+  Competição        ${state.competition.toFixed(1)}
+  Alianças          ${state.allianceStrength.toFixed(1)}
+  Dependência       ${state.dependency.toFixed(1)}
+  Sanções           ${state.sanctionRisk.toFixed(1)}
+  Tensão global     ${state.worldTension.toFixed(1)}
+
+PODER:
+  Autonomia         ${state.strategicAutonomy.toFixed(1)}
+  Poder estratégico ${state.strategicPower.toFixed(1)}
+  Índice do jogo    ${state.gameScore.toFixed(1)}`;
+
+
+    drawChart();
+}
+
+
+/* ========================================================
+   RESIZE
+======================================================== */
+
+window.addEventListener(
+    "resize",
+    drawChart
+);
+
+
+/* ========================================================
+   INICIALIZAÇÃO
+======================================================== */
+
+resetSimulation();
+
+</script>
+
+</body>
+</html>

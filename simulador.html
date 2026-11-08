@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Sociedade</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+  --azul-escuro:#0f172a; --azul-medio:#1e293b; --azul-claro:#3b82f6; --azul-suave:#60a5fa;
+  --cinza-claro:#e2e8f0; --cinza-medio:#94a3b8; --cinza-escuro:#475569; --branco:#ffffff;
+  --verde:#10b981; --vermelho:#ef4444; --amarelo:#f59e0b; --raio:12px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: var(--branco); min-height: 100vh; line-height: 1.6;
+}
+.ecra { display: none; min-height: 100vh; padding: 32px 16px; animation: aparecer 0.4s ease; }
+.ecra.ativo { display: flex; align-items: center; justify-content: center; }
+@keyframes aparecer { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.container { max-width: 900px; width: 100%; margin: 0 auto; }
+.container-largo { max-width: 1300px; }
+.container-centrado { max-width: 640px; width: 100%; text-align: center; margin: 0 auto; }
+
+h1,h2,h3 { font-weight: 700; line-height: 1.2; }
+.titulo-principal {
+  font-size: clamp(28px,5vw,56px); margin-bottom: 16px;
+  background: linear-gradient(135deg,#60a5fa,#a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+h2 { font-size: clamp(20px,3.5vw,36px); margin-bottom: 20px; }
+.subtitulo { font-size: 1rem; color: var(--cinza-medio); margin-bottom: 24px; }
+.descricao { font-size: 0.95rem; color: var(--cinza-medio); margin-bottom: 24px; text-align: center; }
+
+.cartao {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--raio); padding: 22px; margin: 18px 0; text-align: left;
+}
+.cartao.explicacao { font-size: 0.98rem; }
+.cartao.explicacao p { margin-bottom: 12px; }
+.cartao.explicacao ul { margin: 12px 0 12px 22px; }
+.cartao.explicacao li { margin-bottom: 6px; color: var(--cinza-medio); }
+.cartao.explicacao .aviso { color: var(--amarelo); font-weight: 600; margin-top: 14px; }
+
+.botao-primario, .botao-secundario {
+  padding: 14px 24px; border-radius: 10px; font-size: 0.95rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; border: none; font-family: inherit;
+}
+.botao-primario { background: linear-gradient(135deg,var(--azul-claro),var(--azul-suave)); color: var(--branco); }
+.botao-primario:hover:not(:disabled) { transform: translateY(-2px); }
+.botao-primario:disabled { opacity: 0.4; cursor: not-allowed; }
+.botao-secundario { background: rgba(255,255,255,0.08); color: var(--branco); border: 1px solid rgba(255,255,255,0.15); }
+
+.acoes { display: flex; justify-content: space-between; gap: 10px; margin-top: 24px; }
+.acoes.centrado { justify-content: center; flex-wrap: wrap; }
+
+.grelha { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: 14px; margin-top: 18px; }
+.grelha-dois { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+.grelha-horizontes { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 18px; }
+.grelha-graficos { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 18px; margin-top: 18px; }
+.grelha-efeitos { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; margin-top: 18px; }
+
+.cartao-opcao {
+  background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1);
+  border-radius: var(--raio); padding: 18px; cursor: pointer;
+  transition: all 0.2s; position: relative; text-align: left;
+}
+.cartao-opcao:hover { background: rgba(255,255,255,0.08); }
+.cartao-opcao.selecionado {
+  background: rgba(59,130,246,0.15); border-color: var(--azul-claro);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+}
+.cartao-opcao.recomendado {
+  border-color: rgba(96,165,250,0.5); background: rgba(96,165,250,0.08);
+}
+.cartao-opcao .icone { font-size: 1.8rem; margin-bottom: 8px; }
+.cartao-opcao h3 { font-size: 1.05rem; margin-bottom: 6px; }
+.cartao-opcao p { font-size: 0.85rem; color: var(--cinza-medio); }
+.cartao-opcao .check {
+  position: absolute; top: 12px; right: 12px; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--azul-claro); color: var(--branco);
+  display: none; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.8rem;
+}
+.cartao-opcao.selecionado .check { display: flex; }
+.tag-recomendado {
+  position: absolute; top: 12px; left: 12px; font-size: 0.65rem; font-weight: 700;
+  padding: 3px 8px; border-radius: 12px; background: rgba(96,165,250,0.25);
+  color: var(--azul-suave); text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.cartao-horizonte {
+  background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1);
+  border-radius: var(--raio); padding: 22px 14px; text-align: center; cursor: pointer;
+  transition: all 0.2s;
+}
+.cartao-horizonte.selecionado {
+  background: rgba(59,130,246,0.15); border-color: var(--azul-claro);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+}
+.cartao-horizonte .icone { font-size: 2rem; margin-bottom: 8px; }
+.cartao-horizonte h3 { font-size: 1.2rem; margin-bottom: 4px; }
+.cartao-horizonte p { color: var(--cinza-medio); font-size: 0.85rem; }
+
+.objetivo-sugerido { text-align: center; }
+.objetivo-sugerido .etiqueta { color: var(--cinza-medio); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+.objetivo-sugerido .valor-grande { font-size: 2rem; font-weight: 700; color: var(--azul-suave); margin: 10px 0; }
+.objetivo-sugerido .unidade { color: var(--cinza-medio); margin-bottom: 14px; }
+.controlo-objetivo { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.controlo-objetivo label { color: var(--cinza-medio); font-size: 0.85rem; }
+.controlo-objetivo input[type="range"] { flex: 1; min-width: 120px; accent-color: var(--azul-claro); }
+#valor-slider-objetivo { font-weight: 600; color: var(--azul-suave); }
+
+.item-valor {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--raio); padding: 18px; margin-bottom: 14px;
+}
+.item-valor .controlo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.item-valor input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--azul-claro); }
+.item-valor .valor-atual { font-weight: 700; color: var(--azul-suave); }
+
+.loader {
+  width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: var(--azul-claro); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 0 auto 24px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.barra-carregamento {
+  width: 100%; max-width: 360px; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; margin: 24px auto 10px; overflow: hidden;
+}
+.progresso {
+  height: 100%; background: linear-gradient(90deg,var(--azul-claro),var(--azul-suave));
+  width: 0%; transition: width 0.3s; border-radius: 4px;
+}
+.progresso-texto { color: var(--cinza-medio); font-size: 0.85rem; }
+
+.veredicto { padding: 18px; border-radius: var(--raio); text-align: center; font-size: 1.05rem; font-weight: 600; margin: 18px 0; }
+.veredicto.sucesso-grande { background: rgba(16,185,129,0.15); border: 2px solid var(--verde); color: var(--verde); }
+.veredicto.sucesso { background: rgba(16,185,129,0.1); border: 2px solid rgba(16,185,129,0.5); color: var(--verde); }
+.veredicto.parcial { background: rgba(245,158,11,0.1); border: 2px solid rgba(245,158,11,0.5); color: var(--amarelo); }
+.veredicto.fracasso { background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.5); color: var(--vermelho); }
+
+.comparacao { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin: 20px 0; }
+.comparacao-item { padding: 16px; border-radius: var(--raio); text-align: center; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); }
+.comparacao-item.cinza { border-color: var(--cinza-escuro); }
+.comparacao-item.azul { border-color: var(--azul-claro); background: rgba(59,130,246,0.1); }
+.comparacao-item.amarelo { border-color: var(--amarelo); background: rgba(245,158,11,0.1); }
+.comparacao-item .etiqueta { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--cinza-medio); margin-bottom: 8px; }
+.comparacao-item .valor-grande { font-size: 1.4rem; font-weight: 700; }
+
+.cartao-efeito { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--raio); padding: 14px; }
+.cartao-efeito .nome { color: var(--cinza-medio); font-size: 0.85rem; margin-bottom: 8px; }
+.cartao-efeito .valores { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.cartao-efeito .valor-com { font-size: 1.25rem; font-weight: 700; }
+.cartao-efeito .valor-base { font-size: 0.8rem; color: var(--cinza-medio); text-decoration: line-through; }
+.cartao-efeito .delta { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.delta.positivo { background: rgba(16,185,129,0.15); color: var(--verde); }
+.delta.negativo { background: rgba(239,68,68,0.15); color: var(--vermelho); }
+.delta.neutro { background: rgba(148,163,184,0.15); color: var(--cinza-medio); }
+
+.cartao.ganhou { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
+.cartao.perdeu { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
+.cartao.ganhou h3 { color: var(--verde); margin-bottom: 12px; }
+.cartao.perdeu h3 { color: var(--vermelho); margin-bottom: 12px; }
+.cartao.ganhou ul, .cartao.perdeu ul { list-style: none; }
+.cartao.ganhou li, .cartao.perdeu li { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.cartao.ganhou li:last-child, .cartao.perdeu li:last-child { border-bottom: none; }
+
+.cartao-grafico { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--raio); padding: 14px; }
+.cartao-grafico h3 { font-size: 0.9rem; margin-bottom: 10px; color: var(--cinza-claro); }
+.cartao-grafico canvas { max-height: 200px; }
+
+.timeline-container { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--raio); padding: 16px; }
+.timeline-titulo { font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--cinza-claro); }
+.timeline-barra { display: flex; height: 32px; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+.timeline-segmento { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 700; min-width: 2px; }
+.timeline-legenda { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.75rem; color: var(--cinza-medio); }
+.timeline-legenda-item { display: flex; align-items: center; gap: 5px; }
+.timeline-legenda-bolinha { width: 10px; height: 10px; border-radius: 50%; }
+
+#pesquisa-pais {
+  width: 100%; padding: 12px 16px; margin-bottom: 18px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px; color: #fff; font-size: 1rem; font-family: inherit;
+}
+
+#form-pais-custom label { display: block; font-size: 0.85rem; color: var(--cinza-medio); margin-bottom: 8px; }
+#form-pais-custom input:focus { outline: none; border-color: var(--azul-claro); }
+</style>
+</head>
+<body>
+
+<!-- BOAS-VINDAS -->
+<section id="ecra-boas-vindas" class="ecra ativo">
+  <div class="container-centrado">
+    <h1 class="titulo-principal">O Jogo das Decisões</h1>
+    <p class="subtitulo">O que acontece quando tentas resolver um problema da sociedade?</p>
+    <div class="cartao explicacao">
+      <p>Vais escolher um país, um problema, um objetivo e as ferramentas que o Estado vai usar.</p>
+      <p>O simulador corre décadas e mostra-te:</p>
+      <ul>
+        <li>Se atingiste o objetivo</li>
+        <li>Que efeitos colaterais apareceram</li>
+        <li>Quem ganhou e quem perdeu</li>
+      </ul>
+      <p class="aviso">Nenhuma política é neutra. Nenhuma é grátis.</p>
+    </div>
+    <button class="botao-primario" onclick="irPara('ecra-modo')">Começar</button>
+  </div>
+</section>
+
+<!-- MODO -->
+<section id="ecra-modo" class="ecra">
+  <div class="container">
+    <h2>Como queres jogar?</h2>
+    <div class="grelha-dois">
+      <div class="cartao-opcao" onclick="escolherModo('simples')" style="text-align:center; padding:24px;">
+        <div class="icone" style="font-size:2.5rem;">🎮</div>
+        <h3>Modo simples</h3>
+        <p>Escolhes as políticas e vês o efeito.</p>
+      </div>
+      <div class="cartao-opcao" onclick="escolherModo('politico')" style="text-align:center; padding:24px;">
+        <div class="icone" style="font-size:2.5rem;">🏛️</div>
+        <h3>Modo político</h3>
+        <p>Escolhes governo inicial e vês dinâmica política.</p>
+      </div>
+    </div>
+    <div class="acoes"><button class="botao-secundario" onclick="irPara('ecra-boas-vindas')">Voltar</button></div>
+  </div>
+</section>
+
+<!-- PAÍS -->
+<section id="ecra-pais" class="ecra">
+  <div class="container">
+    <h2>Que país queres simular?</h2>
+    <input type="text" id="pesquisa-pais" placeholder="🔍 Pesquisar país..." oninput="filtrarPaises()">
+    <div id="lista-paises" class="grelha"></div>
+    <div id="form-pais-custom" class="cartao" style="display:none;">
+      <h3 style="margin-bottom:14px;">Define o teu país</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <label>Nome<input type="text" id="custom-nome" value="O meu país" style="width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;"></label>
+        <label>População<input type="number" id="custom-populacao" value="10000000" style="width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;"></label>
+        <label>PIB per capita<input type="number" id="custom-pib" value="25000" style="width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;"></label>
+        <label>Idade média<input type="number" id="custom-idade" value="42" style="width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;"></label>
+        <label>Fertilidade<input type="number" id="custom-fertilidade" value="1.5" step="0.1" style="width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;"></label>
+        <label>Dívida pública<input type="number" id="custom-divida" value="1.0" step="0.1" style="width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;"></label>
+      </div>
+    </div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-modo')">Voltar</button>
+      <button class="botao-primario" id="btn-pais-proximo" disabled onclick="confirmarPais()">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- COMPOSIÇÃO POLÍTICA -->
+<section id="ecra-politica" class="ecra">
+  <div class="container">
+    <h2>Composição da sociedade</h2>
+    <p class="descricao">Ajusta o peso de cada grupo político.</p>
+    <div id="lista-grupos" style="margin-top:24px;"></div>
+    <div class="cartao" style="margin-top:20px;">
+      <h3 style="margin-bottom:12px;">Partido no governo</h3>
+      <div id="lista-governo" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;"></div>
+    </div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-pais')">Voltar</button>
+      <button class="botao-primario" id="btn-politica-proximo" disabled onclick="confirmarPolitica()">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEMA -->
+<section id="ecra-problema" class="ecra">
+  <div class="container">
+    <h2>Qual é o problema?</h2>
+    <div id="lista-problemas" class="grelha"></div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="voltarDoProblema()">Voltar</button>
+      <button class="botao-primario" id="btn-problema-proximo" disabled onclick="confirmarProblema()">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- OBJETIVO -->
+<section id="ecra-objetivo" class="ecra">
+  <div class="container">
+    <h2>Que objetivo queres?</h2>
+    <p id="descricao-problema" class="descricao"></p>
+    <div class="cartao objetivo-sugerido">
+      <p class="etiqueta">Objetivo sugerido</p>
+      <p class="valor-grande" id="objetivo-sugerido"></p>
+      <p class="unidade" id="unidade-objetivo"></p>
+      <div class="controlo-objetivo">
+        <label>Ajustar:</label>
+        <input type="range" id="slider-objetivo" min="0" max="100" value="50">
+        <span id="valor-slider-objetivo"></span>
+      </div>
+    </div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-problema')">Voltar</button>
+      <button class="botao-primario" onclick="confirmarObjetivo()">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- HORIZONTE -->
+<section id="ecra-horizonte" class="ecra">
+  <div class="container">
+    <h2>Em quanto tempo?</h2>
+    <div class="grelha-horizontes">
+      <div class="cartao-horizonte" onclick="escolherHorizonte(this, 20)"><div class="icone">⏱</div><h3>20</h3><p>Uma geração</p></div>
+      <div class="cartao-horizonte" onclick="escolherHorizonte(this, 50)"><div class="icone">⏱</div><h3>50</h3><p>Duas gerações</p></div>
+      <div class="cartao-horizonte" onclick="escolherHorizonte(this, 100)"><div class="icone">⏱</div><h3>100</h3><p>Longo prazo</p></div>
+    </div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-objetivo')">Voltar</button>
+      <button class="botao-primario" id="btn-horizonte-proximo" disabled onclick="confirmarHorizonte()">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- INSTRUMENTOS -->
+<section id="ecra-instrumentos" class="ecra">
+  <div class="container">
+    <h2>Que ferramentas?</h2>
+    <p class="descricao">Escolhe até 3.</p>
+    <div id="lista-instrumentos" class="grelha"></div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-horizonte')">Voltar</button>
+      <button class="botao-primario" id="btn-instrumentos-proximo" disabled onclick="confirmarInstrumentos()">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- VALORES -->
+<section id="ecra-valores" class="ecra">
+  <div class="container">
+    <h2>Afinar ferramentas</h2>
+    <div id="lista-valores"></div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-instrumentos')">Voltar</button>
+      <button class="botao-primario" onclick="correrSimulacao()">Correr</button>
+    </div>
+  </div>
+</section>
+
+<!-- A CORRER -->
+<section id="ecra-a-correr" class="ecra">
+  <div class="container-centrado">
+    <div class="loader"></div>
+    <h2>A simular...</h2>
+    <p class="descricao">A calcular <span id="anos-escolhidos">100</span> anos...</p>
+    <div class="barra-carregamento"><div id="progresso-sim" class="progresso"></div></div>
+    <p id="texto-progresso" class="progresso-texto">0%</p>
+  </div>
+</section>
+
+<!-- RESULTADO -->
+<section id="ecra-resultado" class="ecra">
+  <div class="container">
+    <h2 id="titulo-resultado"></h2>
+    <div id="veredicto" class="veredicto"></div>
+    <div class="comparacao">
+      <div class="comparacao-item cinza"><p class="etiqueta">Sem política</p><p class="valor-grande" id="valor-base"></p></div>
+      <div class="comparacao-item azul"><p class="etiqueta">Com política</p><p class="valor-grande" id="valor-int"></p></div>
+      <div class="comparacao-item amarelo"><p class="etiqueta">Objetivo</p><p class="valor-grande" id="valor-alvo"></p></div>
+    </div>
+    <button class="botao-primario" onclick="renderizarEfeitos()">Ver efeitos</button>
+  </div>
+</section>
+
+<!-- EFEITOS -->
+<section id="ecra-efeitos" class="ecra">
+  <div class="container">
+    <h2>Efeitos secundários</h2>
+    <div class="grelha-efeitos" id="grelha-efeitos"></div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-resultado')">Voltar</button>
+      <button class="botao-primario" onclick="renderizarGanhouPerdeu()">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- GANHOU/PERDEU -->
+<section id="ecra-ganhou-perdeu" class="ecra">
+  <div class="container">
+    <h2>Quem ganhou e quem perdeu</h2>
+    <div class="grelha-dois">
+      <div class="cartao ganhou"><h3>✓ Ganharam</h3><ul id="lista-ganhou"></ul></div>
+      <div class="cartao perdeu"><h3>✗ Perderam</h3><ul id="lista-perdeu"></ul></div>
+    </div>
+    <div class="acoes">
+      <button class="botao-secundario" onclick="irPara('ecra-efeitos')">Voltar</button>
+      <button class="botao-primario" onclick="renderizarGraficos()">Ver gráficos</button>
+    </div>
+  </div>
+</section>
+
+<!-- GRÁFICOS -->
+<section id="ecra-graficos" class="ecra">
+  <div class="container container-largo">
+    <h2>Evolução no tempo</h2>
+    <p class="descricao">Cinza: sem política. Azul: com política.</p>
+    <div id="timeline-governos" style="margin-bottom:24px;"></div>
+    <div class="grelha-graficos" id="grelha-graficos"></div>
+    <div class="acoes centrado">
+      <button class="botao-secundario" onclick="reiniciar()">Jogar de novo</button>
+      <button class="botao-primario" onclick="irPara('ecra-fim')">Terminar</button>
+    </div>
+  </div>
+</section>
+
+<!-- FIM -->
+<section id="ecra-fim" class="ecra">
+  <div class="container-centrado">
+    <h1 class="titulo-principal">Aprendeste algo?</h1>
+    <div class="cartao explicacao">
+      <p>Uma política raramente dá só o que prometemos.</p>
+      <p>Nunca é neutra. Nunca é grátis.</p>
+    </div>
+    <button class="botao-primario" onclick="reiniciar()">Jogar outra vez</button>
+  </div>
+</section>
+
+<!-- Carrega o paises.js da mesma pasta -->
+<script src="paises.js"></script>
+
+<!-- Motor e Interface -->
+<script>
+/* ============ DADOS ============ */
+const PERFIS_PAIS = {
+  "portugal": { nome:"Portugal", descricao:"11M hab., envelhecido, dívida alta.", icone:"🇵🇹", problemas_recomendados:["1","6","7"], dados:{ nome:"Portugal", populacao:11_424_031, pib_per_capita:25_000, idade_media:45.8, fertilidade_inicial:1.30, divida_pct_pib:0.897, composicao_etaria:{jovens:0.13,ativos:0.63,reformados:0.24} } },
+  "espanha": { nome:"Espanha", descricao:"48M hab., fertilidade baixa.", icone:"🇪🇸", problemas_recomendados:["1","3","5"], dados:{ nome:"Espanha", populacao:48_500_000, pib_per_capita:31_000, idade_media:45, fertilidade_inicial:1.20, divida_pct_pib:1.02, composicao_etaria:{jovens:0.14,ativos:0.63,reformados:0.23} } },
+  "franca": { nome:"França", descricao:"68M hab., fertilidade média.", icone:"🇫🇷", problemas_recomendados:["1","9","10"], dados:{ nome:"França", populacao:68_500_000, pib_per_capita:42_000, idade_media:42, fertilidade_inicial:1.80, divida_pct_pib:1.12, composicao_etaria:{jovens:0.17,ativos:0.62,reformados:0.21} } },
+  "alemanha": { nome:"Alemanha", descricao:"84M hab., dívida controlada.", icone:"🇩🇪", problemas_recomendados:["1","10"], dados:{ nome:"Alemanha", populacao:84_075_075, pib_per_capita:48_000, idade_media:45.5, fertilidade_inicial:1.50, divida_pct_pib:0.62, composicao_etaria:{jovens:0.14,ativos:0.62,reformados:0.24} } },
+  "italia": { nome:"Itália", descricao:"59M hab., dos mais velhos.", icone:"🇮🇹", problemas_recomendados:["1","2","7"], dados:{ nome:"Itália", populacao:58_940_000, pib_per_capita:34_000, idade_media:48.2, fertilidade_inicial:1.20, divida_pct_pib:1.37, composicao_etaria:{jovens:0.12,ativos:0.63,reformados:0.25} } },
+  "reino_unido": { nome:"Reino Unido", descricao:"69M hab., imigração alta.", icone:"🇬🇧", problemas_recomendados:["3","5","6"], dados:{ nome:"Reino Unido", populacao:69_490_000, pib_per_capita:46_000, idade_media:40.1, fertilidade_inicial:1.55, divida_pct_pib:1.00, composicao_etaria:{jovens:0.17,ativos:0.63,reformados:0.20} } },
+  "polonia": { nome:"Polónia", descricao:"38M hab., fertilidade baixa.", icone:"🇵🇱", problemas_recomendados:["7","9"], dados:{ nome:"Polónia", populacao:38_140_910, pib_per_capita:22_000, idade_media:42, fertilidade_inicial:1.30, divida_pct_pib:0.50, composicao_etaria:{jovens:0.15,ativos:0.65,reformados:0.20} } },
+  "japao": { nome:"Japão", descricao:"123M hab., dívida gigante.", icone:"🇯🇵", problemas_recomendados:["1","2"], dados:{ nome:"Japão", populacao:123_103_479, pib_per_capita:34_000, idade_media:49.8, fertilidade_inicial:1.20, divida_pct_pib:2.30, composicao_etaria:{jovens:0.12,ativos:0.59,reformados:0.29} } },
+  "coreia_sul": { nome:"Coreia do Sul", descricao:"52M hab., fertilidade mais baixa.", icone:"🇰🇷", problemas_recomendados:["1","9"], dados:{ nome:"Coreia do Sul", populacao:51_680_000, pib_per_capita:35_000, idade_media:45.6, fertilidade_inicial:0.72, divida_pct_pib:0.55, composicao_etaria:{jovens:0.11,ativos:0.66,reformados:0.23} } },
+  "eua": { nome:"Estados Unidos", descricao:"347M hab., imigração alta.", icone:"🇺🇸", problemas_recomendados:["2","5","6"], dados:{ nome:"EUA", populacao:347_275_808, pib_per_capita:76_000, idade_media:38, fertilidade_inicial:1.62, divida_pct_pib:1.24, composicao_etaria:{jovens:0.18,ativos:0.63,reformados:0.19} } },
+  "canada": { nome:"Canadá", descricao:"40M hab., forte imigração.", icone:"🇨🇦", problemas_recomendados:["5","6"], dados:{ nome:"Canadá", populacao:40_126_723, pib_per_capita:55_000, idade_media:41, fertilidade_inicial:1.43, divida_pct_pib:1.14, composicao_etaria:{jovens:0.16,ativos:0.65,reformados:0.19} } },
+  "brasil": { nome:"Brasil", descricao:"213M hab., população jovem.", icone:"🇧🇷", problemas_recomendados:["2","3","6"], dados:{ nome:"Brasil", populacao:212_812_405, pib_per_capita:9_000, idade_media:33, fertilidade_inicial:1.62, divida_pct_pib:0.78, composicao_etaria:{jovens:0.21,ativos:0.70,reformados:0.09} } },
+  "mexico": { nome:"México", descricao:"132M hab., emigração p/ EUA.", icone:"🇲🇽", problemas_recomendados:["3","6","9"], dados:{ nome:"México", populacao:131_946_900, pib_per_capita:12_000, idade_media:29, fertilidade_inicial:1.80, divida_pct_pib:0.50, composicao_etaria:{jovens:0.25,ativos:0.66,reformados:0.09} } },
+  "india": { nome:"Índia", descricao:"1.46B, população jovem.", icone:"🇮🇳", problemas_recomendados:["4","8","9"], dados:{ nome:"Índia", populacao:1_463_865_250, pib_per_capita:2_500, idade_media:28, fertilidade_inicial:2.00, divida_pct_pib:0.81, composicao_etaria:{jovens:0.26,ativos:0.67,reformados:0.07} } },
+  "china": { nome:"China", descricao:"1.4B, a envelhecer rápido.", icone:"🇨🇳", problemas_recomendados:["1","7"], dados:{ nome:"China", populacao:1_406_585_000, pib_per_capita:13_000, idade_media:40.1, fertilidade_inicial:1.00, divida_pct_pib:0.99, composicao_etaria:{jovens:0.17,ativos:0.68,reformados:0.15} } },
+  "nigeria": { nome:"Nigéria", descricao:"238M hab., fertilidade alta.", icone:"🇳🇬", problemas_recomendados:["4","8","9"], dados:{ nome:"Nigéria", populacao:237_527_782, pib_per_capita:2_200, idade_media:18, fertilidade_inicial:5.00, divida_pct_pib:0.40, composicao_etaria:{jovens:0.44,ativos:0.53,reformados:0.03} } },
+  "africa_sul": { nome:"África do Sul", descricao:"65M hab., desigualdade.", icone:"🇿🇦", problemas_recomendados:["3","10"], dados:{ nome:"África do Sul", populacao:64_747_320, pib_per_capita:6_500, idade_media:28, fertilidade_inicial:2.30, divida_pct_pib:0.75, composicao_etaria:{jovens:0.28,ativos:0.65,reformados:0.07} } },
+  "egito": { nome:"Egito", descricao:"118M hab., jovem.", icone:"🇪🇬", problemas_recomendados:["3","4","8"], dados:{ nome:"Egito", populacao:118_365_995, pib_per_capita:4_000, idade_media:24, fertilidade_inicial:2.80, divida_pct_pib:0.84, composicao_etaria:{jovens:0.33,ativos:0.61,reformados:0.06} } },
+  "personalizado": { nome:"País personalizado", descricao:"Define as tuas condições.", icone:"🌐", problemas_recomendados:[], dados:null },
+};
+
+// Juntar países do mundo
+if (typeof PAISES_MUNDO !== "undefined") {
+  for (const [k, p] of Object.entries(PAISES_MUNDO)) {
+    if (!PERFIS_PAIS[k]) PERFIS_PAIS[k] = p;
+  }
+}
+
+const PROBLEMAS = {
+  "1": { titulo:"A população está a envelhecer", descricao:"Cada ano nascem menos bebés.", icone:"👴", variavel:"fertilidade", valorSugerido:1.9, min:0.5, max:3.0, unidade:"filhos por mulher" },
+  "2": { titulo:"O Estado está cheio de dívidas", descricao:"Gasta mais do que recebe.", icone:"💳", variavel:"divida_pct_pib", valorSugerido:0.8, min:0.3, max:3.0, unidade:"× PIB" },
+  "3": { titulo:"Há muita gente sem trabalho", descricao:"Muitos procuram emprego.", icone:"😟", variavel:"desemprego", valorSugerido:0.05, min:0.02, max:0.25, unidade:"fração da pop. ativa" },
+  "4": { titulo:"Faltam trabalhadores", descricao:"Empresas não encontram gente.", icone:"👷", variavel:"trabalhadores", valorSugerido:6_000_000, min:2_000_000, max:150_000_000, unidade:"trabalhadores" },
+  "5": { titulo:"As casas estão caras", descricao:"Jovens não conseguem comprar.", icone:"🏠", variavel:"preco_habitacao", valorSugerido:100, min:50, max:500, unidade:"índice" },
+  "6": { titulo:"Os salários são baixos", descricao:"Quem trabalha recebe pouco.", icone:"💸", variavel:"salario_medio", valorSugerido:30000, min:10000, max:80000, unidade:"€/ano" },
+  "7": { titulo:"A população está a desaparecer", descricao:"O país perde habitantes.", icone:"📉", variavel:"populacao", valorSugerido:15_000_000, min:500_000, max:100_000_000, unidade:"habitantes" },
+  "8": { titulo:"Poucas crianças", descricao:"Escolas fecham.", icone:"🧒", variavel:"trabalhadores", valorSugerido:8_000_000, min:1_000_000, max:80_000_000, unidade:"adultos ativos" },
+  "9": { titulo:"Desemprego jovem enorme", descricao:"Jovens emigram.", icone:"🎓", variavel:"desemprego", valorSugerido:0.08, min:0.02, max:0.30, unidade:"fração da pop. ativa" },
+  "10": { titulo:"Velho e endividado", descricao:"Duplo problema.", icone:"⚠️", variavel:"fertilidade", valorSugerido:1.9, min:0.5, max:3.0, unidade:"filhos por mulher" },
+  "11": { titulo:"A coesão social está a quebrar", descricao:"Sociedade dividida.", icone:"🤝", variavel:"coesao", valorSugerido:0.70, min:0.0, max:1.0, unidade:"coesão (0 a 1)" },
+};
+
+const INSTRUMENTOS = {
+  "1": { nome:"Pagar subsídio por filho", descricao:"Dinheiro por criança.", icone:"💰", campo:"subsidio_filho", min:0, max:30000, step:1000, unidade:"€/ano" },
+  "2": { nome:"Deixar entrar imigrantes", descricao:"Abrir portas.", icone:"🌍", campo:"cota_imigracao", min:0, max:500000, step:10000, unidade:"pessoas/ano" },
+  "3": { nome:"Construir mais casas", descricao:"Investir em habitação.", icone:"🏗️", campo:"investimento_habitacao", min:0, max:0.03, step:0.002, unidade:"fração do PIB" },
+  "4": { nome:"Aumentar ou baixar impostos", descricao:"Mais imposto = mais receita.", icone:"📈", campo:"imposto_rendimento", min:0.20, max:0.55, step:0.01, unidade:"fração do salário" },
+  "5": { nome:"Automatizar as empresas", descricao:"Robots substituem gente.", icone:"🤖", campo:"taxa_automacao", min:0.005, max:0.05, step:0.005, unidade:"velocidade anual" },
+  "6": { nome:"Escolher tipo de imigrantes", descricao:"Famílias vs. solteiros.", icone:"👨‍👩‍👧", campo:"fracao_familias_imigrantes", min:0, max:1, step:0.05, unidade:"fração" },
+  "7": { nome:"Investir em educação", descricao:"Melhor formação.", icone:"📚", campo:"investimento_educacao", min:0, max:0.04, step:0.002, unidade:"fração do PIB" },
+  "8": { nome:"Licença parental longa", descricao:"Meses em casa.", icone:"👶", campo:"licenca_parental_meses", min:0, max:24, step:1, unidade:"meses" },
+  "9": { nome:"Facilitar comércio", descricao:"Acordos comerciais.", icone:"🌐", campo:"abertura_comercial", min:0, max:1, step:0.1, unidade:"abertura (0-1)" },
+  "10": { nome:"Investir em infraestrutura", descricao:"Estradas, transportes.", icone:"🚄", campo:"investimento_infra", min:0, max:0.04, step:0.002, unidade:"fração do PIB" },
+  "11": { nome:"Integrar imigrantes", descricao:"Língua, formação.", icone:"🤝", campo:"integracao_migratoria", min:0, max:0.03, step:0.002, unidade:"fração do PIB" },
+};
+
+const GRUPOS_POLITICOS_PREFERENCIAS = {
+  esquerda: { subsidio_filho:20000, cota_imigracao:50000, investimento_habitacao:0.02, imposto_rendimento:0.45, investimento_educacao:0.03, investimento_infra:0.02, integracao_migratoria:0.02 },
+  centro:   { subsidio_filho:8000,  cota_imigracao:100000, investimento_habitacao:0.01, imposto_rendimento:0.32, investimento_educacao:0.015, investimento_infra:0.015, integracao_migratoria:0.01 },
+  direita:  { subsidio_filho:5000,  cota_imigracao:30000, investimento_habitacao:0.005, imposto_rendimento:0.25, investimento_educacao:0.01, investimento_infra:0.02, integracao_migratoria:0.005 },
+  radicais: { subsidio_filho:1000,  cota_imigracao:0, investimento_habitacao:0, imposto_rendimento:0.20, investimento_educacao:0, investimento_infra:0.005, integracao_migratoria:0 },
+};
+
+/* ============ MOTOR ============ */
+class Simulacao {
+  constructor(config) {
+    config = config || {};
+    const a = Number(config.anos);
+    this.anos = (Number.isFinite(a) && a > 0) ? Math.floor(a) : 100;
+
+    const pB = { nome:"Portugal", populacao:10300000, pib_per_capita:24000, idade_media:46, fertilidade_inicial:1.4, divida_pct_pib:1.10, composicao_etaria:{jovens:0.13,ativos:0.63,reformados:0.24} };
+    const pr = config.perfil || {};
+    this.perfil = {
+      nome: pr.nome || pB.nome,
+      populacao: Number(pr.populacao) || pB.populacao,
+      pib_per_capita: Number(pr.pib_per_capita) || pB.pib_per_capita,
+      idade_media: Number(pr.idade_media) || pB.idade_media,
+      fertilidade_inicial: Number(pr.fertilidade_inicial) || pB.fertilidade_inicial,
+      divida_pct_pib: Number(pr.divida_pct_pib) || pB.divida_pct_pib,
+      composicao_etaria: pr.composicao_etaria || pB.composicao_etaria,
+    };
+
+    const n = (v, d) => { const x = Number(v); return Number.isFinite(x) ? x : d; };
+    this.estado = {
+      subsidio_filho: n(config.subsidio_filho, 0),
+      cota_imigracao: n(config.cota_imigracao, 0),
+      investimento_habitacao: n(config.investimento_habitacao, 0),
+      imposto_rendimento: n(config.imposto_rendimento, 0.30),
+      taxa_automacao: n(config.taxa_automacao, 0.005),
+      fracao_familias_imigrantes: n(config.fracao_familias_imigrantes, 0.5),
+      investimento_educacao: n(config.investimento_educacao, 0),
+      licenca_parental_meses: n(config.licenca_parental_meses, 0),
+      abertura_comercial: n(config.abertura_comercial, 0),
+      investimento_infra: n(config.investimento_infra, 0),
+      integracao_migratoria: n(config.integracao_migratoria, 0),
+    };
+
+    const cI = config.composicao_politica || { esquerda:0.28, centro:0.35, direita:0.30, radicais:0.07 };
+    this.modo = config.modo || "simples";
+    this.composicao_politica = { esquerda:cI.esquerda, centro:cI.centro, direita:cI.direita, radicais:cI.radicais };
+    this.governo_inicial = config.governo_inicial || "centro";
+
+    this.historico = {
+      ano:[], populacao:[], idade_media:[], fertilidade:[], pib_per_capita:[],
+      salario_medio:[], desemprego:[], preco_habitacao:[], divida_pct_pib:[],
+      imigrantes:[], trabalhadores:[], reformados:[], automacao:[], coesao:[],
+      esquerda:[], centro:[], direita:[], radicais:[], governo:[], emigrantes:[],
+    };
+  }
+
+  run() {
+    const perfil = this.perfil;
+    const anos = this.anos;
+
+    let emigrantes_acumulados = 0;
+    let pop = perfil.populacao;
+    let pop_ativa = pop * perfil.composicao_etaria.ativos;
+    let pop_reformada = pop * perfil.composicao_etaria.reformados;
+    let nativos = pop, imigrantes = 0;
+
+    let fertilidade = perfil.fertilidade_inicial;
+    let pib = pop * perfil.pib_per_capita;
+    let salario_medio = perfil.pib_per_capita * 0.65;
+    let preco_habitacao = 100;
+    let divida = perfil.divida_pct_pib * pib;
+    let automacao = 0.10, desemprego = 0.06;
+    let expectativa_fertilidade = perfil.fertilidade_inicial;
+    let expectativa_pib = pib;
+    let coesao = 0.7;
+
+    let esquerda = this.composicao_politica.esquerda;
+    let centro = this.composicao_politica.centro;
+    let direita = this.composicao_politica.direita;
+    let radicais = this.composicao_politica.radicais;
+    let governo_atual = this.governo_inicial;
+
+    for (let ano = 0; ano < anos; ano++) {
+      let ef = this.estado;
+
+      if (this.modo === "politico") {
+        if ((ano + 1) % 4 === 0) {
+          const votos = { esquerda, centro, direita, radicais };
+          let v = "centro", mx = 0;
+          for (const [g, vv] of Object.entries(votos)) { if (vv > mx) { mx = vv; v = g; } }
+          governo_atual = v;
+        }
+        const pref = GRUPOS_POLITICOS_PREFERENCIAS[governo_atual];
+        ef = {
+          subsidio_filho: pref.subsidio_filho, cota_imigracao: pref.cota_imigracao,
+          investimento_habitacao: pref.investimento_habitacao, imposto_rendimento: pref.imposto_rendimento,
+          taxa_automacao: this.estado.taxa_automacao, fracao_familias_imigrantes: this.estado.fracao_familias_imigrantes,
+          investimento_educacao: pref.investimento_educacao, licenca_parental_meses: this.estado.licenca_parental_meses,
+          abertura_comercial: this.estado.abertura_comercial, investimento_infra: pref.investimento_infra,
+          integracao_migratoria: pref.integracao_migratoria,
+        };
+      }
+
+      const cota = ef.cota_imigracao;
+      const frac = ef.fracao_familias_imigrantes;
+      const solt = cota * (1 - frac);
+      imigrantes += cota; pop += cota;
+      pop_ativa += solt * 0.8 + cota * frac * 2 * 0.9;
+
+      const pi = expectativa_pib * 0.98;
+      const td = pi / Math.max(salario_medio * 0.85, 1);
+      const emprego = Math.min(pop_ativa, td);
+      desemprego = Math.max(0, (pop_ativa - emprego) / Math.max(pop_ativa, 1));
+
+      const prod = 1 + automacao * 1.5
+        + ef.investimento_educacao * 2.0
+        + ef.abertura_comercial * 0.20
+        + ef.investimento_infra * 3.0;
+      const pt = (perfil.pib_per_capita * (pop / Math.max(pop_ativa, 1))) * 0.85;
+      pib = emprego * prod * pt;
+
+      const sd = perfil.pib_per_capita * 0.65 * (1 + (prod - 1) * 0.5);
+      salario_medio = Math.max(perfil.pib_per_capita * 0.50, salario_medio * 0.7 + sd * 0.3);
+
+      const ratio = salario_medio / (perfil.pib_per_capita * 0.6);
+      if (ratio > 1.2) automacao = Math.min(0.85, automacao + ef.taxa_automacao);
+
+      const press = Math.pow(pop / perfil.populacao, 1.4);
+      const aliv = Math.max(0.6, 1 - ef.investimento_habitacao * 10);
+      const eimp = 1 - (ef.imposto_rendimento - 0.30) * 0.5;
+      preco_habitacao = 100 * press * aliv * eimp;
+
+      const e_sub = (ef.subsidio_filho / 1000) * 0.012;
+      const e_hab = -(preco_habitacao - 100) / 100 * 0.15;
+      const e_imp = -(ef.imposto_rendimento - 0.30) * 0.5;
+      const e_aut = -automacao * 0.2;
+      const e_des = -desemprego * 2.0;
+      const e_lic = ef.licenca_parental_meses * 0.02;
+      const f_c = 0.3 + 0.7 * coesao;
+
+      let fd = perfil.fertilidade_inicial + e_sub*f_c + e_hab*f_c + e_imp + e_aut + e_des*f_c + e_lic*f_c;
+      fd = Math.max(0.5, Math.min(4.0, fd));
+      fertilidade = fertilidade * 0.85 + fd * 0.15;
+
+      const mf = pop * 0.20;
+      const nasc = mf * (fertilidade / 35);
+      const mort = pop * 0.011;
+      pop += nasc - mort;
+      nativos += nasc - mort * (nativos / Math.max(pop, 1));
+      pop_ativa = pop * (0.55 + fertilidade * 0.03);
+      pop_reformada = pop * (0.20 + (perfil.idade_media - 40) * 0.005);
+
+      const ms = emprego * salario_medio;
+      const rb = pib * 0.20 + ms * ef.imposto_rendimento;
+      const nc = pop * 0.18;
+      const subs = Math.min(nc * ef.subsidio_filho, pib * 0.08);
+      const pens = pop_reformada * salario_medio * 0.55;
+      const sau = pib * 0.09;
+      const edu = pib * 0.06 + pib * ef.investimento_educacao;
+      const out = pib * 0.10;
+      const ih = Math.min(pib * ef.investimento_habitacao, pib * 0.04);
+      const ii = pib * ef.investimento_infra;
+      const iint = pib * ef.integracao_migratoria;
+      const cl = (ef.licenca_parental_meses / 12) * salario_medio * nasc;
+      const desp = pens + sau + edu + out + subs + ih + ii + iint + cl;
+      const saldo = rb - desp;
+      divida = Math.max(0, divida - saldo);
+      divida += divida * 0.03;
+      if (divida > pib * 2.5) divida = pib * 2.5;
+
+      expectativa_fertilidade = expectativa_fertilidade * 0.7 + fertilidade * 0.3;
+      expectativa_pib = expectativa_pib * 0.7 + pib * 0.3;
+
+      const txm = cota / Math.max(pop, 1);
+      const pm = Math.max(0, txm - 0.01) * 15;
+      const ei = ef.integracao_migratoria * 1.0;
+      const pdes = Math.max(0, desemprego - 0.05) * 3;
+      const dpt = divida / Math.max(pib, 1);
+      const pdiv = Math.max(0, dpt - 1.0) * 0.2;
+      const rec = (0.7 - coesao) * 0.05;
+      coesao = coesao - pm + ei - pdes - pdiv + rec;
+      coesao = Math.max(0, Math.min(1, coesao));
+
+      if (this.modo === "politico") {
+        const fdes = desemprego - 0.06;
+        const fdiv = (divida / Math.max(pib, 1)) - 1.0;
+        const fcoe = coesao - 0.7;
+        let de = fdes * 0.5 + fcoe * 0.05;
+        let dc = -Math.abs(fdes)*0.3 - Math.abs(fdiv)*0.05 + fcoe*0.15;
+        let dd = fdiv*0.15 + fdes*0.1;
+        let dr = -fcoe*0.5 + Math.max(0,fdes)*0.2 + Math.max(0,fdiv)*0.1;
+        esquerda = Math.max(0.02, esquerda + de*0.02);
+        centro = Math.max(0.02, centro + dc*0.02);
+        direita = Math.max(0.02, direita + dd*0.02);
+        radicais = Math.max(0.01, radicais + dr*0.02);
+        const tot = esquerda + centro + direita + radicais;
+        esquerda/=tot; centro/=tot; direita/=tot; radicais/=tot;
+      }
+
+      if (coesao < 0.30 && dpt > 1.20) {
+        const emig = pop_ativa * 0.01;
+        pop_ativa -= emig;
+        pop -= emig;
+        emigrantes_acumulados += emig;
+        divida = Math.max(0, divida - pib * 0.03);
+        coesao = Math.min(1, coesao + 0.02);
+      }
+
+      const peso = anos > 0 ? Math.min(1, Math.max(0, ano / anos)) : 0;
+      this.historico.ano.push(ano + 1);
+      this.historico.populacao.push(pop);
+      const im = perfil.idade_media;
+      const imf = 30 + Math.max(0, 50 - fertilidade * 15);
+      this.historico.idade_media.push(im * (1 - peso) + imf * peso);
+      this.historico.fertilidade.push(fertilidade);
+      this.historico.pib_per_capita.push(pib / Math.max(pop, 1));
+      this.historico.salario_medio.push(salario_medio);
+      this.historico.desemprego.push(desemprego);
+      this.historico.preco_habitacao.push(preco_habitacao);
+      this.historico.divida_pct_pib.push(divida / Math.max(pib, 1));
+      this.historico.imigrantes.push(imigrantes);
+      this.historico.trabalhadores.push(pop_ativa);
+      this.historico.reformados.push(pop_reformada);
+      this.historico.automacao.push(automacao);
+      this.historico.coesao.push(coesao);
+      this.historico.esquerda.push(esquerda);
+      this.historico.centro.push(centro);
+      this.historico.direita.push(direita);
+      this.historico.radicais.push(radicais);
+      this.historico.governo.push(governo_atual);
+      this.historico.emigrantes.push(emigrantes_acumulados);
+    }
+    return this.historico;
+  }
+}
+
+/* ============ ESTADO ============ */
+const jogo = {
+  modo:null, perfilPais:null, problemaEscolhido:null, valorAlvo:null, anos:null,
+  instrumentosEscolhidos:[], valoresInstrumentos:{},
+  historicoBase:null, historicoInt:null,
+  composicaoInicial:{ esquerda:0.28, centro:0.35, direita:0.30, radicais:0.07 },
+  governoInicial:"centro",
+};
+
+function irPara(id) {
+  document.querySelectorAll(".ecra").forEach(e => e.classList.remove("ativo"));
+  const el = document.getElementById(id);
+  if (el) el.classList.add("ativo");
+  window.scrollTo(0, 0);
+}
+
+function reiniciar() {
+  Object.assign(jogo, {
+    modo:null, perfilPais:null, problemaEscolhido:null, valorAlvo:null, anos:null,
+    instrumentosEscolhidos:[], valoresInstrumentos:{}, historicoBase:null, historicoInt:null,
+    composicaoInicial:{ esquerda:0.28, centro:0.35, direita:0.30, radicais:0.07 },
+    governoInicial:"centro",
+  });
+  irPara("ecra-boas-vindas");
+}
+
+function escolherModo(modo) { jogo.modo = modo; irPara("ecra-pais"); }
+
+/* ============ PAÍS ============ */
+function renderizarPaises() { filtrarPaises(); }
+
+function filtrarPaises() {
+  const q = (document.getElementById("pesquisa-pais")?.value || "").toLowerCase().trim();
+  const c = document.getElementById("lista-paises");
+  if (!c) return;
+  c.innerHTML = "";
+  let entradas = Object.entries(PERFIS_PAIS);
+  if (q) entradas = entradas.filter(([k,p]) => p.nome.toLowerCase().includes(q));
+
+  const prio = ["portugal","espanha","franca","alemanha","italia","reino_unido","polonia","japao","coreia_sul","eua","canada","brasil","mexico","india","china","nigeria","africa_sul","egito"];
+  entradas.sort((a,b) => {
+    const aP = prio.indexOf(a[0]), bP = prio.indexOf(b[0]);
+    if (aP >= 0 && bP >= 0) return aP - bP;
+    if (aP >= 0) return -1;
+    if (bP >= 0) return 1;
+    if (a[0] === "personalizado") return 1;
+    if (b[0] === "personalizado") return -1;
+    return a[1].nome.localeCompare(b[1].nome, "pt");
+  });
+
+  for (const [k,p] of entradas) {
+    const d = document.createElement("div");
+    d.className = "cartao-opcao";
+    d.innerHTML = `<div class="check">✓</div><div class="icone">${p.icone}</div><h3>${p.nome}</h3><p>${p.descricao}</p>`;
+    d.onclick = () => selecionarPais(k, d);
+    c.appendChild(d);
+  }
+  if (entradas.length === 0) c.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--cinza-medio);padding:40px;">Nenhum país encontrado.</p>';
+}
+
+function selecionarPais(k, el) {
+  document.querySelectorAll("#lista-paises .cartao-opcao").forEach(e => e.classList.remove("selecionado"));
+  el.classList.add("selecionado");
+  jogo.perfilPais = k;
+  document.getElementById("btn-pais-proximo").disabled = false;
+  const form = document.getElementById("form-pais-custom");
+  if (form) form.style.display = (k === "personalizado") ? "block" : "none";
+}
+
+function confirmarPais() {
+  if (jogo.perfilPais === "personalizado") {
+    const nome = document.getElementById("custom-nome").value || "Personalizado";
+    const pop = parseFloat(document.getElementById("custom-populacao").value) || 10_000_000;
+    const pib = parseFloat(document.getElementById("custom-pib").value) || 25_000;
+    const idade = parseFloat(document.getElementById("custom-idade").value) || 42;
+    const fert = parseFloat(document.getElementById("custom-fertilidade").value) || 1.5;
+    const div = parseFloat(document.getElementById("custom-divida").value) || 1.0;
+    const jovens = Math.max(0.08, Math.min(0.40, 0.30 - (idade - 20) * 0.008));
+    const reformados = Math.max(0.03, Math.min(0.30, 0.05 + (idade - 20) * 0.009));
+    const ativos = Math.max(0.40, 1 - jovens - reformados);
+    PERFIS_PAIS.personalizado.dados = { nome, populacao:pop, pib_per_capita:pib, idade_media:idade, fertilidade_inicial:fert, divida_pct_pib:div, composicao_etaria:{jovens,ativos,reformados} };
+  }
+  if (jogo.modo === "politico") { renderizarPolitica(); irPara("ecra-politica"); }
+  else irPara("ecra-problema");
+}
+
+/* ============ POLÍTICA ============ */
+function renderizarPolitica() {
+  const c = document.getElementById("lista-grupos");
+  if (!c) return;
+  c.innerHTML = "";
+  const grupos = [
+    { chave:"esquerda", nome:"Esquerda", cor:"#ef4444", desc:"Subsídios, educação." },
+    { chave:"centro", nome:"Centro", cor:"#3b82f6", desc:"Moderado." },
+    { chave:"direita", nome:"Direita", cor:"#f59e0b", desc:"Impostos baixos." },
+    { chave:"radicais", nome:"Radicais", cor:"#7f1d1d", desc:"Rejeitam compromissos." },
+  ];
+  for (const g of grupos) {
+    const v = jogo.composicaoInicial[g.chave];
+    const d = document.createElement("div");
+    d.className = "grupo-politico";
+    d.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:14px;height:14px;border-radius:50%;background:${g.cor};"></div>
+        <div style="font-weight:700;flex:1;">${g.nome}</div>
+        <div style="font-weight:700;color:var(--azul-suave);" id="valor-${g.chave}">${(v*100).toFixed(0)}%</div>
+      </div>
+      <input type="range" min="0" max="100" step="1" value="${(v*100).toFixed(0)}" id="slider-${g.chave}" style="width:100%;accent-color:var(--azul-claro);">
+      <p style="font-size:0.8rem;color:var(--cinza-medio);margin-top:6px;">${g.desc}</p>
+    `;
+    c.appendChild(d);
+    setTimeout(() => {
+      const s = document.getElementById(`slider-${g.chave}`);
+      if (s) s.oninput = () => atualizarComposicao(g.chave, parseInt(s.value));
+    }, 0);
+  }
+  const cg = document.getElementById("lista-governo");
+  if (!cg) return;
+  cg.innerHTML = "";
+  for (const g of grupos) {
+    const d = document.createElement("div");
+    d.className = "cartao-opcao" + (jogo.governoInicial === g.chave ? " selecionado" : "");
+    d.style.textAlign = "center";
+    d.style.padding = "12px 6px";
+    d.innerHTML = `<div style="color:${g.cor};font-size:1.4rem;">●</div><div style="font-size:0.8rem;font-weight:600;">${g.nome}</div>`;
+    d.onclick = () => selecionarGoverno(g.chave, d);
+    cg.appendChild(d);
+  }
+  atualizarBotaoPolitica();
+}
+
+function atualizarComposicao(c, v) {
+  jogo.composicaoInicial[c] = v / 100;
+  const s = document.getElementById(`valor-${c}`);
+  if (s) s.textContent = v + "%";
+  atualizarBotaoPolitica();
+}
+
+function selecionarGoverno(c, el) {
+  document.querySelectorAll("#lista-governo .cartao-opcao").forEach(e => e.classList.remove("selecionado"));
+  el.classList.add("selecionado");
+  jogo.governoInicial = c;
+  atualizarBotaoPolitica();
+}
+
+function atualizarBotaoPolitica() {
+  const b = document.getElementById("btn-politica-proximo");
+  if (!b) return;
+  const s = Object.values(jogo.composicaoInicial).reduce((a,b) => a+b, 0);
+  b.disabled = !(s > 0.1 && jogo.governoInicial);
+}
+
+function confirmarPolitica() {
+  const s = Object.values(jogo.composicaoInicial).reduce((a,b) => a+b, 0);
+  if (s > 0) for (const k of Object.keys(jogo.composicaoInicial)) jogo.composicaoInicial[k] /= s;
+  irPara("ecra-problema");
+}
+
+function voltarDoProblema() {
+  irPara(jogo.modo === "politico" ? "ecra-politica" : "ecra-pais");
+}
+
+/* ============ PROBLEMA ============ */
+function renderizarProblemas() {
+  const c = document.getElementById("lista-problemas");
+  if (!c) return;
+  c.innerHTML = "";
+  const perfil = PERFIS_PAIS[jogo.perfilPais];
+  const rec = perfil?.problemas_recomendados || [];
+  const entradas = Object.entries(PROBLEMAS).sort((a,b) => {
+    const aR = rec.includes(a[0]), bR = rec.includes(b[0]);
+    if (aR && !bR) return -1;
+    if (!aR && bR) return 1;
+    return 0;
+  });
+  for (const [k,p] of entradas) {
+    const eR = rec.includes(k);
+    const d = document.createElement("div");
+    d.className = "cartao-opcao" + (eR ? " recomendado" : "");
+    d.innerHTML = `
+      <div class="check">✓</div>
+      ${eR ? '<div class="tag-recomendado">⭐ Recomendado</div>' : ''}
+      <div class="icone">${p.icone}</div>
+      <h3>${p.titulo}</h3>
+      <p>${p.descricao}</p>
+    `;
+    d.onclick = () => selecionarProblema(k, d);
+    c.appendChild(d);
+  }
+}
+
+function selecionarProblema(k, el) {
+  document.querySelectorAll("#lista-problemas .cartao-opcao").forEach(e => e.classList.remove("selecionado"));
+  el.classList.add("selecionado");
+  jogo.problemaEscolhido = k;
+  document.getElementById("btn-problema-proximo").disabled = false;
+}
+
+function confirmarProblema() {
+  const p = PROBLEMAS[jogo.problemaEscolhido];
+  document.getElementById("descricao-problema").textContent = p.descricao;
+  jogo.valorAlvo = p.valorSugerido;
+  document.getElementById("objetivo-sugerido").textContent = formatarValor(p.variavel, p.valorSugerido);
+  document.getElementById("unidade-objetivo").textContent = p.unidade;
+  const s = document.getElementById("slider-objetivo");
+  s.min = p.min; s.max = p.max; s.step = (p.max - p.min) / 100;
+  s.value = p.valorSugerido;
+  atualizarTextoSlider();
+  s.oninput = atualizarTextoSlider;
+  irPara("ecra-objetivo");
+}
+
+function atualizarTextoSlider() {
+  const p = PROBLEMAS[jogo.problemaEscolhido];
+  const s = document.getElementById("slider-objetivo");
+  jogo.valorAlvo = parseFloat(s.value);
+  document.getElementById("valor-slider-objetivo").textContent = formatarValor(p.variavel, jogo.valorAlvo);
+  document.getElementById("objetivo-sugerido").textContent = formatarValor(p.variavel, jogo.valorAlvo);
+}
+
+function confirmarObjetivo() { irPara("ecra-horizonte"); }
+
+/* ============ HORIZONTE ============ */
+function escolherHorizonte(el, anos) {
+  document.querySelectorAll(".cartao-horizonte").forEach(e => e.classList.remove("selecionado"));
+  el.classList.add("selecionado");
+  jogo.anos = anos;
+  document.getElementById("btn-horizonte-proximo").disabled = false;
+}
+
+function confirmarHorizonte() {
+  if (jogo.modo === "politico") correrSimulacao();
+  else { renderizarInstrumentos(); irPara("ecra-instrumentos"); }
+}
+
+/* ============ INSTRUMENTOS ============ */
+function renderizarInstrumentos() {
+  const c = document.getElementById("lista-instrumentos");
+  if (!c) return;
+  c.innerHTML = "";
+  for (const [k,i] of Object.entries(INSTRUMENTOS)) {
+    const d = document.createElement("div");
+    d.className = "cartao-opcao";
+    d.innerHTML = `<div class="check">✓</div><div class="icone">${i.icone}</div><h3>${i.nome}</h3><p>${i.descricao}</p>`;
+    d.onclick = () => toggleInstrumento(k, d);
+    c.appendChild(d);
+  }
+}
+
+function toggleInstrumento(k, el) {
+  if (jogo.instrumentosEscolhidos.includes(k)) {
+    jogo.instrumentosEscolhidos = jogo.instrumentosEscolhidos.filter(x => x !== k);
+    el.classList.remove("selecionado");
+  } else {
+    if (jogo.instrumentosEscolhidos.length >= 3) { alert("Máximo 3 ferramentas."); return; }
+    jogo.instrumentosEscolhidos.push(k);
+    el.classList.add("selecionado");
+  }
+  document.getElementById("btn-instrumentos-proximo").disabled = jogo.instrumentosEscolhidos.length === 0;
+}
+
+function confirmarInstrumentos() { renderizarValores(); irPara("ecra-valores"); }
+
+/* ============ VALORES ============ */
+function renderizarValores() {
+  const c = document.getElementById("lista-valores");
+  if (!c) return;
+  c.innerHTML = "";
+  for (const k of jogo.instrumentosEscolhidos) {
+    const i = INSTRUMENTOS[k];
+    const d = document.createElement("div");
+    d.className = "item-valor";
+    const m = (i.min + i.max) / 2;
+    jogo.valoresInstrumentos[k] = m;
+    d.innerHTML = `
+      <h3>${i.icone} ${i.nome}</h3>
+      <p style="font-size:0.85rem;color:var(--cinza-medio);margin:6px 0;">${i.descricao}</p>
+      <div class="controlo">
+        <input type="range" min="${i.min}" max="${i.max}" step="${i.step}" value="${m}" id="slider-${k}">
+        <span class="valor-atual" id="valor-${k}">${formatarValorInstrumento(k, m)}</span>
+      </div>
+    `;
+    c.appendChild(d);
+    setTimeout(() => {
+      const s = document.getElementById(`slider-${k}`);
+      if (s) s.oninput = (e) => {
+        const v = parseFloat(e.target.value);
+        jogo.valoresInstrumentos[k] = v;
+        document.getElementById(`valor-${k}`).textContent = formatarValorInstrumento(k, v);
+      };
+    }, 0);
+  }
+}
+
+function formatarValorInstrumento(k, v) {
+  const i = INSTRUMENTOS[k];
+  if (i.campo === "subsidio_filho") return `${v.toLocaleString("pt-PT")} €`;
+  if (i.campo === "cota_imigracao") return `${(v/1000).toFixed(0)}k/ano`;
+  if (i.campo === "investimento_habitacao") return `${(v*100).toFixed(1)}% PIB`;
+  if (i.campo === "imposto_rendimento") return `${(v*100).toFixed(0)}%`;
+  if (i.campo === "taxa_automacao") return `${(v*100).toFixed(1)}%`;
+  if (i.campo === "fracao_familias_imigrantes") return `${(v*100).toFixed(0)}%`;
+  if (i.campo === "investimento_educacao") return `${(v*100).toFixed(1)}% PIB`;
+  if (i.campo === "licenca_parental_meses") return `${v} meses`;
+  if (i.campo === "abertura_comercial") return `${(v*100).toFixed(0)}%`;
+  if (i.campo === "investimento_infra") return `${(v*100).toFixed(1)}% PIB`;
+  if (i.campo === "integracao_migratoria") return `${(v*100).toFixed(1)}% PIB`;
+  return v.toFixed(2);
+}
+
+/* ============ CORRER ============ */
+async function correrSimulacao() {
+  irPara("ecra-a-correr");
+  document.getElementById("anos-escolhidos").textContent = jogo.anos;
+  const p = document.getElementById("progresso-sim");
+  const t = document.getElementById("texto-progresso");
+  for (let i = 0; i <= 30; i += 5) { p.style.width = i + "%"; t.textContent = i + "%"; await sleep(30); }
+  await sleep(20);
+  const perfil = PERFIS_PAIS[jogo.perfilPais].dados;
+  const simBase = new Simulacao({ anos: jogo.anos, perfil });
+  jogo.historicoBase = simBase.run();
+  p.style.width = "60%"; t.textContent = "60%";
+  await sleep(30);
+  const cfg = { anos: jogo.anos, perfil };
+  if (jogo.modo !== "politico") {
+    for (const [k,v] of Object.entries(jogo.valoresInstrumentos)) cfg[INSTRUMENTOS[k].campo] = v;
+  }
+  if (jogo.modo === "politico") {
+    cfg.modo = "politico";
+    cfg.composicao_politica = jogo.composicaoInicial;
+    cfg.governo_inicial = jogo.governoInicial;
+  }
+  const simInt = new Simulacao(cfg);
+  jogo.historicoInt = simInt.run();
+  p.style.width = "100%"; t.textContent = "100%";
+  await sleep(150);
+  mostrarResultado();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ============ RESULTADO ============ */
+function mostrarResultado() {
+  const pr = PROBLEMAS[jogo.problemaEscolhido];
+  const b = jogo.historicoBase, i = jogo.historicoInt;
+  const v = pr.variavel;
+  const vB = b[v][b[v].length - 1];
+  const vI = i[v][i[v].length - 1];
+  const vA = jogo.valorAlvo;
+  document.getElementById("titulo-resultado").textContent = "Resultado";
+  document.getElementById("valor-base").textContent = formatarValor(v, vB);
+  document.getElementById("valor-int").textContent = formatarValor(v, vI);
+  document.getElementById("valor-alvo").textContent = formatarValor(v, vA);
+  const dB = Math.abs(vA - vB), dI = Math.abs(vA - vI);
+  const ve = document.getElementById("veredicto");
+  ve.className = "veredicto";
+  if (dI < dB) {
+    const m = (dB - dI) / Math.max(dB, 1e-9);
+    if (m > 0.5) { ve.classList.add("sucesso-grande"); ve.textContent = "✓✓✓ Funcionou muito bem."; }
+    else if (m > 0.2) { ve.classList.add("sucesso"); ve.textContent = "✓✓ Funcionou, mas só em parte."; }
+    else { ve.classList.add("parcial"); ve.textContent = "✓ Aproximou-se pouco."; }
+  } else {
+    if (dI > dB * 1.5) { ve.classList.add("fracasso"); ve.textContent = "✗✗✗ Afastou-se."; }
+    else { ve.classList.add("fracasso"); ve.textContent = "✗ Não atingiu o objetivo."; }
+  }
+  const antiga = document.querySelector("#ecra-resultado .info-politica");
+  if (antiga) antiga.remove();
+  if (jogo.modo === "politico" && i.governo) {
+    const gf = i.governo[i.governo.length - 1];
+    const nomes = { esquerda:"Esquerda", centro:"Centro", direita:"Direita", radicais:"Radicais" };
+    const info = document.createElement("p");
+    info.className = "info-politica";
+    info.style.cssText = "text-align:center;color:var(--cinza-medio);margin-top:14px;font-size:0.9rem;";
+    if (gf !== jogo.governoInicial) info.innerHTML = `🏛️ <strong>Inicial:</strong> ${nomes[jogo.governoInicial]} → <strong>Final:</strong> ${nomes[gf]}`;
+    else info.innerHTML = `🏛️ <strong>Governo:</strong> ${nomes[gf]}`;
+    const cmp = document.querySelector("#ecra-resultado .comparacao");
+    if (cmp && cmp.parentNode) cmp.parentNode.insertBefore(info, cmp.nextSibling);
+  }
+  irPara("ecra-resultado");
+}
+
+/* ============ EFEITOS ============ */
+function renderizarEfeitos() {
+  const c = document.getElementById("grelha-efeitos");
+  if (!c) return;
+  c.innerHTML = "";
+  const vars = [
+    { campo:"populacao", nome:"👥 População", fmt: v => (v/1e6).toFixed(1) + " M" },
+    { campo:"idade_media", nome:"📅 Idade média", fmt: v => v.toFixed(1) + " anos" },
+    { campo:"trabalhadores", nome:"👷 Trabalhadores", fmt: v => (v/1e6).toFixed(1) + " M" },
+    { campo:"salario_medio", nome:"💵 Salário médio", fmt: v => Math.round(v).toLocaleString("pt-PT") + " €" },
+    { campo:"desemprego", nome:"😟 Desemprego", fmt: v => (v*100).toFixed(1) + "%" },
+    { campo:"preco_habitacao", nome:"🏠 Preço das casas", fmt: v => v.toFixed(0) },
+    { campo:"divida_pct_pib", nome:"💳 Dívida do Estado", fmt: v => (v*100).toFixed(0) + "% PIB" },
+    { campo:"imigrantes", nome:"🌍 Imigrantes", fmt: v => (v/1000).toFixed(0) + "k" },
+    { campo:"emigrantes", nome:"🚪 Emigrantes (crise)", fmt: v => (v/1000).toFixed(0) + "k" },
+    { campo:"automacao", nome:"🤖 Automação", fmt: v => (v*100).toFixed(0) + "%" },
+    { campo:"coesao", nome:"🤝 Coesão social", fmt: v => (v*100).toFixed(0) + "%" },
+  ];
+  for (const v of vars) {
+    const b = jogo.historicoBase[v.campo], i = jogo.historicoInt[v.campo];
+    const vB = b[b.length-1], vI = i[i.length-1];
+    const d = vI - vB;
+    const dr = Math.abs(d) / Math.max(Math.abs(vB), 1e-9);
+    let cl = "neutro";
+    if (dr > 0.02) cl = d > 0 ? "positivo" : "negativo";
+    const dv = document.createElement("div");
+    dv.className = "cartao-efeito";
+    dv.innerHTML = `
+      <p class="nome">${v.nome}</p>
+      <div class="valores">
+        <span class="valor-com">${v.fmt(vI)}</span>
+        <span class="valor-base">${v.fmt(vB)}</span>
+      </div>
+      <span class="delta ${cl}">${d > 0 ? "+" : ""}${v.fmt(d)}</span>
+    `;
+    c.appendChild(dv);
+  }
+  irPara("ecra-efeitos");
+}
+
+/* ============ GANHOU/PERDEU ============ */
+function renderizarGanhouPerdeu() {
+  const b = jogo.historicoBase, i = jogo.historicoInt;
+  const u = a => a[a.length-1];
+  const g = [], p = [];
+  if (u(i.salario_medio) > u(b.salario_medio) * 1.02) g.push("💵 Quem trabalha — salário subiu");
+  if (u(i.salario_medio) < u(b.salario_medio) * 0.98) p.push("💵 Quem trabalha — salário desceu");
+  if (u(i.preco_habitacao) < u(b.preco_habitacao) * 0.98) g.push("🏠 Quem procura casa — preços baixaram");
+  if (u(i.preco_habitacao) > u(b.preco_habitacao) * 1.02) p.push("🏠 Quem procura casa — preços subiram");
+  if (u(i.divida_pct_pib) < u(b.divida_pct_pib) - 0.05) g.push("💳 Contribuintes futuros — menos dívida");
+  if (u(i.divida_pct_pib) > u(b.divida_pct_pib) + 0.05) p.push("💳 Contribuintes futuros — mais dívida");
+  if (u(i.idade_media) < u(b.idade_media) - 1) g.push("👶 Sociedade — mais jovem");
+  if (u(i.idade_media) > u(b.idade_media) + 1) p.push("👴 Sociedade — mais envelhecida");
+  if (u(i.coesao) > u(b.coesao) + 0.05) g.push("🤝 Sociedade — coesão subiu");
+  if (u(i.coesao) < u(b.coesao) - 0.05) p.push("🤝 Sociedade — coesão caiu");
+  document.getElementById("lista-ganhou").innerHTML = g.length ? g.map(x=>`<li>${x}</li>`).join("") : "<li>Ninguém</li>";
+  document.getElementById("lista-perdeu").innerHTML = p.length ? p.map(x=>`<li>${x}</li>`).join("") : "<li>Ninguém</li>";
+  irPara("ecra-ganhou-perdeu");
+}
+
+/* ============ GRÁFICOS ============ */
+function renderizarGraficos() {
+  irPara("ecra-graficos");
+  renderizarTimeline();
+  const c = document.getElementById("grelha-graficos");
+  if (!c) return;
+  c.innerHTML = "";
+  const graf = [
+    { campo:"populacao", titulo:"População", escala: v => v/1e6, unidade:"M" },
+    { campo:"fertilidade", titulo:"Fertilidade", escala: v => v, unidade:"filhos/mulher" },
+    { campo:"idade_media", titulo:"Idade média", escala: v => v, unidade:"anos" },
+    { campo:"salario_medio", titulo:"Salário médio", escala: v => v, unidade:"€/ano" },
+    { campo:"desemprego", titulo:"Desemprego", escala: v => v*100, unidade:"%" },
+    { campo:"preco_habitacao", titulo:"Preço das casas", escala: v => v, unidade:"índice" },
+    { campo:"divida_pct_pib", titulo:"Dívida do Estado", escala: v => v*100, unidade:"% PIB" },
+    { campo:"automacao", titulo:"Automação", escala: v => v*100, unidade:"%" },
+    { campo:"imigrantes", titulo:"Imigrantes", escala: v => v/1000, unidade:"mil" },
+    { campo:"emigrantes", titulo:"Emigrantes (crise)", escala: v => v/1000, unidade:"mil" },
+    { campo:"coesao", titulo:"Coesão social", escala: v => v*100, unidade:"%" },
+    { campo:"esquerda", titulo:"Esquerda", escala: v => v*100, unidade:"%" },
+    { campo:"centro", titulo:"Centro", escala: v => v*100, unidade:"%" },
+    { campo:"direita", titulo:"Direita", escala: v => v*100, unidade:"%" },
+    { campo:"radicais", titulo:"Radicais", escala: v => v*100, unidade:"%" },
+  ];
+  let gf = graf;
+  if (jogo.modo !== "politico") {
+    gf = graf.filter(x => !["esquerda","centro","direita","radicais"].includes(x.campo));
+  }
+  for (const x of gf) {
+    const d = document.createElement("div");
+    d.className = "cartao-grafico";
+    d.innerHTML = `<h3>${x.titulo} (${x.unidade})</h3><canvas id="grafico-${x.campo}"></canvas>`;
+    c.appendChild(d);
+  }
+  let i = 0;
+  function desenha() {
+    if (i >= gf.length) return;
+    const x = gf[i];
+    const cv = document.getElementById("grafico-" + x.campo);
+    if (!cv) { i++; requestAnimationFrame(desenha); return; }
+    new Chart(cv.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: jogo.historicoBase.ano,
+        datasets: [
+          { label:"Sem política", data: jogo.historicoBase[x.campo].map(x.escala), borderColor:"#94a3b8", backgroundColor:"rgba(148,163,184,0.1)", borderWidth:2, tension:0.3, pointRadius:0 },
+          { label:"Com política", data: jogo.historicoInt[x.campo].map(x.escala), borderColor:"#60a5fa", backgroundColor:"rgba(96,165,250,0.1)", borderWidth:2, tension:0.3, pointRadius:0 },
+        ],
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, animation:false,
+        plugins:{ legend:{ labels:{ color:"#e2e8f0", font:{ size:11 } } } },
+        scales:{
+          x:{ ticks:{ color:"#94a3b8", autoSkip:true, maxTicksLimit:5 }, grid:{ color:"rgba(255,255,255,0.05)" } },
+          y:{ ticks:{ color:"#94a3b8", maxTicksLimit:5 }, grid:{ color:"rgba(255,255,255,0.05)" } },
+        },
+      },
+    });
+    i++;
+    requestAnimationFrame(desenha);
+  }
+  requestAnimationFrame(desenha);
+}
+
+function renderizarTimeline() {
+  const c = document.getElementById("timeline-governos");
+  if (!c) return;
+  if (jogo.modo !== "politico") { c.innerHTML = ""; return; }
+  const h = jogo.historicoInt;
+  if (!h || !h.governo) { c.innerHTML = ""; return; }
+  const cores = { esquerda:"#ef4444", centro:"#3b82f6", direita:"#f59e0b", radicais:"#7f1d1d" };
+  const nomes = { esquerda:"Esquerda", centro:"Centro", direita:"Direita", radicais:"Radicais" };
+  const segs = []; let at = null;
+  for (let i = 0; i < h.governo.length; i++) {
+    const g = h.governo[i];
+    if (!at || at.g !== g) { if (at) segs.push(at); at = { g, i, f:i, n:1 }; }
+    else { at.f = i; at.n++; }
+  }
+  if (at) segs.push(at);
+  const tot = h.governo.length;
+  let bH = '<div class="timeline-barra">';
+  for (const s of segs) {
+    const w = (s.n / tot) * 100;
+    bH += `<div class="timeline-segmento" style="width:${w}%;background:${cores[s.g]||'#666'};" title="${nomes[s.g]} (${s.i+1}-${s.f+1})">${w>5?s.n+"a":""}</div>`;
+  }
+  bH += '</div>';
+  let lH = '<div class="timeline-legenda">';
+  for (const k of Object.keys(cores)) lH += `<div class="timeline-legenda-item"><div class="timeline-legenda-bolinha" style="background:${cores[k]};"></div><span>${nomes[k]}</span></div>`;
+  lH += '</div>';
+  c.innerHTML = `<div class="timeline-container"><div class="timeline-titulo">🏛️ Governos (${tot} anos)</div>${bH}${lH}</div>`;
+}
+
+/* ============ FORMATAÇÃO ============ */
+function formatarValor(v, val) {
+  if (v === "fertilidade") return val.toFixed(2) + " filhos";
+  if (v === "divida_pct_pib") return (val * 100).toFixed(0) + "% PIB";
+  if (v === "desemprego") return (val * 100).toFixed(1) + "%";
+  if (v === "trabalhadores") return (val / 1e6).toFixed(1) + " M";
+  if (v === "preco_habitacao") return val.toFixed(0);
+  if (v === "populacao") return (val / 1e6).toFixed(1) + " M";
+  if (v === "coesao") return (val * 100).toFixed(0) + "%";
+  return val.toFixed(2);
+}
+
+/* ============ INIT ============ */
+document.addEventListener("DOMContentLoaded", () => {
+  const b1 = document.querySelector("#ecra-resultado .botao-primario");
+  if (b1) b1.onclick = () => renderizarEfeitos();
+  const b2 = document.querySelector("#ecra-efeitos .botao-primario");
+  if (b2) b2.onclick = () => renderizarGanhouPerdeu();
+  const b3 = document.querySelector("#ecra-ganhou-perdeu .botao-primario");
+  if (b3) b3.onclick = () => renderizarGraficos();
+  renderizarPaises();
+  renderizarProblemas();
+});
+</script>
+</body>
+</html>
