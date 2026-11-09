@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+        <!-- Meta Tags para Partilha (Open Graph) -->
+    <meta property="og:title" content="Simulador de Sociedades - Teoria de Zimous">
+    <meta property="og:description" content="Laboratório macroeconómico e de teoria dos jogos. Ajuste políticas e veja o impacto.">
+    <meta property="og:image" content="https://zimous12m-tech.github.io/simulador-politico/capa.jpg">
+    <meta property="og:type" content="website">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Sociedades — Escolha o Modo</title>
@@ -26,7 +32,7 @@
             animation: fadeIn 0.6s ease-out;
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
+
         h1 {
             font-size: clamp(32px, 5vw, 52px);
             font-weight: 800;
@@ -73,7 +79,7 @@
         }
         .card.simples::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
         .card.avancado::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
-        
+
         .card:hover {
             background: rgba(255, 255, 255, 0.06);
             transform: translateY(-8px);
@@ -112,7 +118,7 @@
         }
         .card.simples:hover .btn { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
         .card.avancado:hover .btn { background: #8b5cf6; border-color: #8b5cf6; box-shadow: 0 0 15px rgba(139,92,246,0.5); }
-        
+
         .footer {
             margin-top: 60px;
             color: #475569;
@@ -131,7 +137,7 @@
     <div class="container">
         <h1>Simulador de Sociedades</h1>
         <p class="sub">Teste as suas ideias políticas. Descubra a realidade. Nenhuma decisão é neutra ou grátis.<br><br>Escolha a experiência que deseja ter:</p>
-        
+
         <div class="grid">
             <!-- Link para o simulador original -->
             <a href="simulador.html" class="card simples">
@@ -140,7 +146,7 @@
                 <p>O modo narrativo. Escolha o país, a sua ideologia, o problema a resolver e veja o veredicto da realidade. Descubra quem ganha, quem perde e os efeitos colaterais. Ideal para iniciantes e debates.</p>
                 <div class="btn">Entrar no Jogo →</div>
             </a>
-            
+
             <!-- Link para o simulador XPTO original -->
             <a href="simuladorXPTO.html" class="card avancado">
                 <div class="icon">🔬</div>
@@ -149,7 +155,7 @@
                 <div class="btn">Entrar no Laboratório →</div>
             </a>
         </div>
-        
+
         <div class="footer">
             Simulação Matemática · Teoria dos Jogos · Dinâmica de Sistemas
         </div>
